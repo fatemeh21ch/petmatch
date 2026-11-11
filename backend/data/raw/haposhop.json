@@ -7,12 +7,12 @@
    "category": "dry food"
   },
   "price": {
-   "amount": 3540000,
+   "amount": 3510000,
    "currency": "IRT"
   },
-  "inventory": 19,
+  "inventory": 17,
   "url": "https://haposhop.example/products/hap-001",
-  "synced_at": "2026-11-10T23:49+00:00"
+  "synced_at": "2026-11-11T05:39+00:00"
  },
  {
   "id": "hap-002",
@@ -22,12 +22,12 @@
    "category": "dry food"
   },
   "price": {
-   "amount": 830000,
+   "amount": 950000,
    "currency": "IRT"
   },
-  "inventory": 22,
+  "inventory": 21,
   "url": "https://haposhop.example/products/hap-002",
-  "synced_at": "2026-11-10T09:51+00:00"
+  "synced_at": "2026-11-10T21:10+00:00"
  },
  {
   "id": "hap-003",
@@ -37,106 +37,226 @@
    "category": "dry food"
   },
   "price": {
-   "amount": 3360000,
+   "amount": 3390000,
    "currency": "IRT"
   },
-  "inventory": 9,
+  "inventory": 24,
   "url": "https://haposhop.example/products/hap-003",
-  "synced_at": "2026-11-10T14:47+00:00"
+  "synced_at": "2026-11-11T02:23+00:00"
  },
  {
   "id": "hap-004",
-  "title": "Royal Canin استریلایز ۳۷ مخصوص گربه",
+  "title": "Royal Canin پرشین ادالت مخصوص گربه",
   "specs": {
    "weight": "2000 gr",
    "category": "dry food"
   },
   "price": {
-   "amount": 3600000,
+   "amount": 3410000,
    "currency": "IRT"
   },
-  "inventory": 0,
+  "inventory": 34,
   "url": "https://haposhop.example/products/hap-004",
-  "synced_at": "2026-11-11T03:32+00:00"
+  "synced_at": "2026-11-11T18:31+00:00"
  },
  {
   "id": "hap-005",
+  "title": "Reflex Plus ادالت مرغ مخصوص گربه",
+  "specs": {
+   "weight": "1500 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 1480000,
+   "currency": "IRT"
+  },
+  "inventory": 25,
+  "url": "https://haposhop.example/products/hap-005",
+  "synced_at": "2026-11-11T03:15+00:00"
+ },
+ {
+  "id": "hap-006",
+  "title": "Reflex Plus کیتن مرغ مخصوص گربه",
+  "specs": {
+   "weight": "1500 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 1460000,
+   "currency": "IRT"
+  },
+  "inventory": 7,
+  "url": "https://haposhop.example/products/hap-006",
+  "synced_at": "2026-11-11T02:06+00:00"
+ },
+ {
+  "id": "hap-007",
   "title": "Reflex Plus ادالت سالمون مخصوص گربه",
   "specs": {
    "weight": "15000 gr",
    "category": "dry food"
   },
   "price": {
-   "amount": 10520000,
+   "amount": 9220000,
    "currency": "IRT"
   },
-  "inventory": 34,
-  "url": "https://haposhop.example/products/hap-005",
-  "synced_at": "2026-11-10T22:32+00:00"
+  "inventory": 26,
+  "url": "https://haposhop.example/products/hap-007",
+  "synced_at": "2026-11-10T23:00+00:00"
  },
  {
-  "id": "hap-006",
+  "id": "hap-008",
+  "title": "Reflex Plus استریلایز مرغ مخصوص گربه",
+  "specs": {
+   "weight": "1500 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 1490000,
+   "currency": "IRT"
+  },
+  "inventory": 17,
+  "url": "https://haposhop.example/products/hap-008",
+  "synced_at": "2026-11-10T19:36+00:00"
+ },
+ {
+  "id": "hap-009",
   "title": "Josera کتلوکس اردک مخصوص گربه",
   "specs": {
    "weight": "2000 gr",
    "category": "dry food"
   },
   "price": {
-   "amount": 2580000,
+   "amount": 2780000,
    "currency": "IRT"
   },
-  "inventory": 7,
-  "url": "https://haposhop.example/products/hap-006",
-  "synced_at": "2026-11-10T13:35+00:00"
+  "inventory": 8,
+  "url": "https://haposhop.example/products/hap-009",
+  "synced_at": "2026-11-11T02:07+00:00"
  },
  {
-  "id": "hap-007",
-  "title": "Brit Care ادالت بدون غلات سالمون مخصوص گربه",
+  "id": "hap-010",
+  "title": "Josera کریسمو سینیور مخصوص گربه",
   "specs": {
    "weight": "2000 gr",
    "category": "dry food"
   },
   "price": {
-   "amount": 2550000,
+   "amount": 2740000,
    "currency": "IRT"
   },
   "inventory": 25,
-  "url": "https://haposhop.example/products/hap-007",
-  "synced_at": "2026-11-10T15:24+00:00"
+  "url": "https://haposhop.example/products/hap-010",
+  "synced_at": "2026-11-11T12:48+00:00"
  },
  {
-  "id": "hap-008",
+  "id": "hap-011",
+  "title": "Brit Care کیتن بدون غلات مرغ مخصوص گربه",
+  "specs": {
+   "weight": "2000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 2290000,
+   "currency": "IRT"
+  },
+  "inventory": 0,
+  "url": "https://haposhop.example/products/hap-011",
+  "synced_at": "2026-11-11T03:35+00:00"
+ },
+ {
+  "id": "hap-012",
   "title": "Farmina N&D کدو حلوایی مرغ ادالت مخصوص گربه",
   "specs": {
    "weight": "1500 gr",
    "category": "dry food"
   },
   "price": {
-   "amount": 3690000,
+   "amount": 4000000,
    "currency": "IRT"
   },
-  "inventory": 31,
-  "url": "https://haposhop.example/products/hap-008",
-  "synced_at": "2026-11-10T14:10+00:00"
+  "inventory": 27,
+  "url": "https://haposhop.example/products/hap-012",
+  "synced_at": "2026-11-11T17:47+00:00"
  },
  {
-  "id": "hap-009",
-  "title": "Monge نچرال تن ماهی مخصوص گربه",
+  "id": "hap-013",
+  "title": "Pro Plan کیتن مرغ مخصوص گربه",
+  "specs": {
+   "weight": "1500 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 2910000,
+   "currency": "IRT"
+  },
+  "inventory": 23,
+  "url": "https://haposhop.example/products/hap-013",
+  "synced_at": "2026-11-11T07:05+00:00"
+ },
+ {
+  "id": "hap-014",
+  "title": "Monge نچرال مرغ مخصوص گربه",
   "specs": {
    "weight": "80 gr",
    "category": "wet food"
   },
   "price": {
-   "amount": 160000,
+   "amount": 150000,
+   "currency": "IRT"
+  },
+  "inventory": 5,
+  "url": "https://haposhop.example/products/hap-014",
+  "synced_at": "2026-11-11T08:42+00:00"
+ },
+ {
+  "id": "hap-015",
+  "title": "Royal Canin استریلایز گریوی پوچ مخصوص گربه",
+  "specs": {
+   "weight": "85 gr",
+   "category": "wet food"
+  },
+  "price": {
+   "amount": 130000,
+   "currency": "IRT"
+  },
+  "inventory": 28,
+  "url": "https://haposhop.example/products/hap-015",
+  "synced_at": "2026-11-11T09:04+00:00"
+ },
+ {
+  "id": "hap-016",
+  "title": "Whiskas ادالت تن ماهی پوچ مخصوص گربه",
+  "specs": {
+   "weight": "85 gr",
+   "category": "wet food"
+  },
+  "price": {
+   "amount": 60000,
+   "currency": "IRT"
+  },
+  "inventory": 4,
+  "url": "https://haposhop.example/products/hap-016",
+  "synced_at": "2026-11-11T07:08+00:00"
+ },
+ {
+  "id": "hap-017",
+  "title": "Whiskas ادالت مرغ پوچ مخصوص گربه",
+  "specs": {
+   "weight": "85 gr",
+   "category": "wet food"
+  },
+  "price": {
+   "amount": 70000,
    "currency": "IRT"
   },
   "inventory": 0,
-  "url": "https://haposhop.example/products/hap-009",
-  "synced_at": "2026-11-10T21:28+00:00"
+  "url": "https://haposhop.example/products/hap-017",
+  "synced_at": "2026-11-11T19:50+00:00"
  },
  {
-  "id": "hap-010",
-  "title": "Royal Canin کیتن گریوی پوچ مخصوص گربه",
+  "id": "hap-018",
+  "title": "Pro Plan ادالت سالمون پوچ مخصوص گربه",
   "specs": {
    "weight": "85 gr",
    "category": "wet food"
@@ -145,113 +265,308 @@
    "amount": 120000,
    "currency": "IRT"
   },
-  "inventory": 33,
-  "url": "https://haposhop.example/products/hap-010",
-  "synced_at": "2026-11-11T02:03+00:00"
+  "inventory": 17,
+  "url": "https://haposhop.example/products/hap-018",
+  "synced_at": "2026-11-11T02:49+00:00"
  },
  {
-  "id": "hap-011",
-  "title": "Royal Canin مینی ادالت مخصوص سگ",
-  "specs": {
-   "weight": "2000 gr",
-   "category": "dry food"
-  },
-  "price": {
-   "amount": 2860000,
-   "currency": "IRT"
-  },
-  "inventory": 28,
-  "url": "https://haposhop.example/products/hap-011",
-  "synced_at": "2026-11-10T20:05+00:00"
- },
- {
-  "id": "hap-012",
-  "title": "Reflex Plus مدیوم لارج ادالت بره مخصوص سگ",
-  "specs": {
-   "weight": "3000 gr",
-   "category": "dry food"
-  },
-  "price": {
-   "amount": 2010000,
-   "currency": "IRT"
-  },
-  "inventory": 35,
-  "url": "https://haposhop.example/products/hap-012",
-  "synced_at": "2026-11-10T17:11+00:00"
- },
- {
-  "id": "hap-013",
-  "title": "Brit Care پاپی بره برنج مخصوص سگ",
-  "specs": {
-   "weight": "3000 gr",
-   "category": "dry food"
-  },
-  "price": {
-   "amount": 2700000,
-   "currency": "IRT"
-  },
-  "inventory": 0,
-  "url": "https://haposhop.example/products/hap-013",
-  "synced_at": "2026-11-10T21:39+00:00"
- },
- {
-  "id": "hap-014",
+  "id": "hap-019",
   "title": "Ever Clean اکسترا استرانگ بدون عطر مخصوص گربه",
   "specs": {
    "weight": "6000 ml",
    "category": "litter"
   },
   "price": {
-   "amount": 1670000,
+   "amount": 1730000,
    "currency": "IRT"
   },
-  "inventory": 22,
-  "url": "https://haposhop.example/products/hap-014",
-  "synced_at": "2026-11-10T17:37+00:00"
+  "inventory": 0,
+  "url": "https://haposhop.example/products/hap-019",
+  "synced_at": "2026-11-11T09:06+00:00"
  },
  {
-  "id": "hap-015",
+  "id": "hap-020",
+  "title": "Ever Clean اکسترا استرانگ بدون عطر مخصوص گربه",
+  "specs": {
+   "weight": "10000 ml",
+   "category": "litter"
+  },
+  "price": {
+   "amount": 2720000,
+   "currency": "IRT"
+  },
+  "inventory": 7,
+  "url": "https://haposhop.example/products/hap-020",
+  "synced_at": "2026-11-11T17:49+00:00"
+ },
+ {
+  "id": "hap-021",
   "title": "Cat's Best اورجینال بدون عطر مخصوص گربه",
   "specs": {
    "weight": "10000 ml",
    "category": "litter"
   },
   "price": {
-   "amount": 1250000,
+   "amount": 1170000,
    "currency": "IRT"
   },
   "inventory": 0,
-  "url": "https://haposhop.example/products/hap-015",
-  "synced_at": "2026-11-11T03:01+00:00"
+  "url": "https://haposhop.example/products/hap-021",
+  "synced_at": "2026-11-11T09:25+00:00"
  },
  {
-  "id": "hap-016",
-  "title": "Catit کرمی سالمون مخصوص گربه",
+  "id": "hap-022",
+  "title": "Cat's Best اورجینال بدون عطر مخصوص گربه",
+  "specs": {
+   "weight": "20000 ml",
+   "category": "litter"
+  },
+  "price": {
+   "amount": 2150000,
+   "currency": "IRT"
+  },
+  "inventory": 1,
+  "url": "https://haposhop.example/products/hap-022",
+  "synced_at": "2026-11-11T14:44+00:00"
+ },
+ {
+  "id": "hap-023",
+  "title": "ParsLitter بنتونیت بدون عطر مخصوص گربه",
+  "specs": {
+   "weight": "10000 gr",
+   "category": "litter"
+  },
+  "price": {
+   "amount": 420000,
+   "currency": "IRT"
+  },
+  "inventory": 34,
+  "url": "https://haposhop.example/products/hap-023",
+  "synced_at": "2026-11-11T08:35+00:00"
+ },
+ {
+  "id": "hap-024",
+  "title": "ParsLitter بنتونیت پودر بچه مخصوص گربه",
+  "specs": {
+   "weight": "10000 gr",
+   "category": "litter"
+  },
+  "price": {
+   "amount": 470000,
+   "currency": "IRT"
+  },
+  "inventory": 40,
+  "url": "https://haposhop.example/products/hap-024",
+  "synced_at": "2026-11-11T02:26+00:00"
+ },
+ {
+  "id": "hap-025",
+  "title": "ParsLitter بنتونیت اسطوخودوس مخصوص گربه",
+  "specs": {
+   "weight": "5000 gr",
+   "category": "litter"
+  },
+  "price": {
+   "amount": 260000,
+   "currency": "IRT"
+  },
+  "inventory": 40,
+  "url": "https://haposhop.example/products/hap-025",
+  "synced_at": "2026-11-11T11:11+00:00"
+ },
+ {
+  "id": "hap-026",
+  "title": "Dreamies مرغ مخصوص گربه",
+  "specs": {
+   "weight": "60 gr",
+   "category": "treat"
+  },
+  "price": {
+   "amount": 190000,
+   "currency": "IRT"
+  },
+  "inventory": 1,
+  "url": "https://haposhop.example/products/hap-026",
+  "synced_at": "2026-11-11T15:50+00:00"
+ },
+ {
+  "id": "hap-027",
+  "title": "Dreamies سالمون مخصوص گربه",
+  "specs": {
+   "weight": "60 gr",
+   "category": "treat"
+  },
+  "price": {
+   "amount": 180000,
+   "currency": "IRT"
+  },
+  "inventory": 28,
+  "url": "https://haposhop.example/products/hap-027",
+  "synced_at": "2026-11-11T15:39+00:00"
+ },
+ {
+  "id": "hap-028",
+  "title": "Catit کرمی مرغ مخصوص گربه",
   "specs": {
    "weight": "75 gr",
    "category": "treat"
   },
   "price": {
-   "amount": 200000,
+   "amount": 190000,
    "currency": "IRT"
   },
-  "inventory": 36,
-  "url": "https://haposhop.example/products/hap-016",
-  "synced_at": "2026-11-11T10:56+00:00"
+  "inventory": 40,
+  "url": "https://haposhop.example/products/hap-028",
+  "synced_at": "2026-11-10T23:51+00:00"
  },
  {
-  "id": "hap-017",
-  "title": "Pedigree دنتاستیکس مینی مخصوص سگ",
+  "id": "hap-029",
+  "title": "GimCat مالت پیست مخصوص گربه",
   "specs": {
-   "weight": "110 gr",
+   "weight": "50 gr",
    "category": "treat"
   },
   "price": {
-   "amount": 240000,
+   "amount": 320000,
+   "currency": "IRT"
+  },
+  "inventory": 3,
+  "url": "https://haposhop.example/products/hap-029",
+  "synced_at": "2026-11-11T05:41+00:00"
+ },
+ {
+  "id": "hap-030",
+  "title": "Royal Canin مینی ادالت مخصوص سگ",
+  "specs": {
+   "weight": "2000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 2850000,
+   "currency": "IRT"
+  },
+  "inventory": 21,
+  "url": "https://haposhop.example/products/hap-030",
+  "synced_at": "2026-11-10T20:13+00:00"
+ },
+ {
+  "id": "hap-031",
+  "title": "Royal Canin مینی پاپی مخصوص سگ",
+  "specs": {
+   "weight": "2000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 3240000,
+   "currency": "IRT"
+  },
+  "inventory": 32,
+  "url": "https://haposhop.example/products/hap-031",
+  "synced_at": "2026-11-11T17:18+00:00"
+ },
+ {
+  "id": "hap-032",
+  "title": "Royal Canin مدیوم ادالت مخصوص سگ",
+  "specs": {
+   "weight": "4000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 4860000,
+   "currency": "IRT"
+  },
+  "inventory": 38,
+  "url": "https://haposhop.example/products/hap-032",
+  "synced_at": "2026-11-11T16:32+00:00"
+ },
+ {
+  "id": "hap-033",
+  "title": "Reflex Plus مدیوم لارج ادالت بره مخصوص سگ",
+  "specs": {
+   "weight": "3000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 2240000,
+   "currency": "IRT"
+  },
+  "inventory": 0,
+  "url": "https://haposhop.example/products/hap-033",
+  "synced_at": "2026-11-11T18:05+00:00"
+ },
+ {
+  "id": "hap-034",
+  "title": "Reflex Plus مدیوم لارج پاپی مرغ مخصوص سگ",
+  "specs": {
+   "weight": "3000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 2370000,
+   "currency": "IRT"
+  },
+  "inventory": 5,
+  "url": "https://haposhop.example/products/hap-034",
+  "synced_at": "2026-11-11T03:42+00:00"
+ },
+ {
+  "id": "hap-035",
+  "title": "Brit Care ادالت مدیوم بره برنج مخصوص سگ",
+  "specs": {
+   "weight": "3000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 2940000,
+   "currency": "IRT"
+  },
+  "inventory": 19,
+  "url": "https://haposhop.example/products/hap-035",
+  "synced_at": "2026-11-10T20:46+00:00"
+ },
+ {
+  "id": "hap-036",
+  "title": "Josera مینی جونیور اردک مخصوص سگ",
+  "specs": {
+   "weight": "900 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 1010000,
+   "currency": "IRT"
+  },
+  "inventory": 22,
+  "url": "https://haposhop.example/products/hap-036",
+  "synced_at": "2026-11-11T16:38+00:00"
+ },
+ {
+  "id": "hap-037",
+  "title": "Pro Plan پاپی مدیوم مرغ مخصوص سگ",
+  "specs": {
+   "weight": "3000 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 3870000,
    "currency": "IRT"
   },
   "inventory": 27,
-  "url": "https://haposhop.example/products/hap-017",
-  "synced_at": "2026-11-10T11:33+00:00"
+  "url": "https://haposhop.example/products/hap-037",
+  "synced_at": "2026-11-11T07:40+00:00"
+ },
+ {
+  "id": "hap-038",
+  "title": "Hill's پاپی مدیوم مرغ مخصوص سگ",
+  "specs": {
+   "weight": "2500 gr",
+   "category": "dry food"
+  },
+  "price": {
+   "amount": 3700000,
+   "currency": "IRT"
+  },
+  "inventory": 0,
+  "url": "https://haposhop.example/products/hap-038",
+  "synced_at": "2026-11-11T18:08+00:00"
  }
 ]

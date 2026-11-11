@@ -10,7 +10,8 @@
    "free_over": 3000000
   },
   "accuracy": 0.97,
-  "format": "csv/fa/toman"
+  "format": "csv/fa/toman",
+  "color": "#0e7c66"
  },
  {
   "id": "zoomall",
@@ -23,7 +24,8 @@
    "free_over": 0
   },
   "accuracy": 0.95,
-  "format": "json/en/rial"
+  "format": "json/en/rial",
+  "color": "#2f6fb5"
  },
  {
   "id": "miomall",
@@ -36,7 +38,8 @@
    "free_over": 5000000
   },
   "accuracy": 0.93,
-  "format": "csv/fa-arabic/formatted"
+  "format": "csv/fa-arabic/formatted",
+  "color": "#b5487a"
  },
  {
   "id": "haposhop",
@@ -49,7 +52,8 @@
    "free_over": 2500000
   },
   "accuracy": 0.96,
-  "format": "json-nested/mixed"
+  "format": "json-nested/mixed",
+  "color": "#d97a1c"
  },
  {
   "id": "pashmaloo",
@@ -62,6 +66,35 @@
    "free_over": 0
   },
   "accuracy": 0.81,
-  "format": "csv/mixed/typos"
+  "format": "csv/mixed/typos",
+  "color": "#7a5a3a"
+ },
+ {
+  "id": "panjetala",
+  "name": "پنجه طلا",
+  "website": "https://panjetala.example",
+  "rating": 4.5,
+  "verified": true,
+  "shipping": {
+   "flat": 55000,
+   "free_over": 4000000
+  },
+  "accuracy": 0.94,
+  "format": "csv/fa/rial-formatted",
+  "color": "#c79a1e"
+ },
+ {
+  "id": "koochepet",
+  "name": "کوچه پت",
+  "website": "https://koochepet.example",
+  "rating": 4.0,
+  "verified": true,
+  "shipping": {
+   "flat": 50000,
+   "free_over": 2000000
+  },
+  "accuracy": 0.9,
+  "format": "json/en/kg-float",
+  "color": "#5a4fc4"
  }
 ]

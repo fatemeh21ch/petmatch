@@ -1,22 +1,15 @@
 import json
-import os
-import secrets
 import statistics
 import threading
 from datetime import datetime, timezone
-from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import Cookie, Depends, FastAPI, HTTPException, Query, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
-from . import ai, feeding, kb, pipeline
+from . import ai, analytics, auth, feeding, kb, pipeline
 from .search import (Intent, apply_profile, explain_facts, filter_products, fuzzy_fallback, intent_dict, offer_view,
                      parse_rules, rank)
-
-FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
-ADMIN_TOKEN = os.environ.get("PETMATCH_ADMIN_TOKEN", "petmatch-admin")
 
 app = FastAPI(title="PetMatch API", version="1.0")
 _lock = threading.Lock()
@@ -162,6 +155,7 @@ def search(q: str = Query("", max_length=200), sort: str | None = Query(None, pa
     pet_d = pet_from_query(pet)
     it, prefs, relaxed, rows, ai_used = run_search(q, sort, pet_d)
     facts = explain_facts(rows, it)
+    analytics.log_search(q, len(rows), it.understood())
     return dict(query=q, intent=intent_dict(it), chips=chips(it), prefs=prefs, relaxed=relaxed, ai_used=ai_used,
                 not_understood=bool(q.strip()) and not it.understood() and not it.from_profile,
                 feeding_available=bool(feeding.daily_need(pet_d)),
@@ -251,12 +245,15 @@ def nav():
 
 
 @app.get("/api/v1/products/{pid}")
-def product(pid: str, pet: str | None = Query(None, max_length=500)):
+def product(pid: str, pet: str | None = Query(None, max_length=500), track: bool = False):
     p = catalog()["products"].get(pid)
     if not p:
         raise HTTPException(404, "not found")
     pet_d = pet_from_query(pet)
     best, cheapest, caveat = offer_view(p)
+    if track:
+        for o in p["offers"]:
+            analytics.record("view", o["listing_id"])
     offers = sorted(p["offers"], key=lambda o: (not o["available"], o["anomaly"] is not None, o["stale"], o["total"]))
     hist = _daily_min(p)
     prices = [h[1] for h in hist]
@@ -291,10 +288,205 @@ def report(r: Report):
     return {"ok": True}
 
 
+# ------------------------------------------------------------------ auth (phone + OTP)
+class OtpRequest(BaseModel):
+    phone: str = Field(max_length=20)
+
+
+class OtpVerify(BaseModel):
+    phone: str = Field(max_length=20)
+    code: str = Field(max_length=8)
+
+
+class Signup(BaseModel):
+    phone: str = Field(max_length=20)
+    name: str = Field(min_length=2, max_length=40)
+    role: str = Field(pattern="^(buyer|seller)$")   # admins are never created from the public form
+    store_name: str | None = Field(None, max_length=40)
+    website: str | None = Field(None, max_length=80)
+
+
+@app.get("/api/v1/auth/demo-accounts")
+def demo_accounts():
+    """Only exposed in demo mode: lets the login page offer one-click autofill per role."""
+    if not auth.DEMO_MODE:
+        return []
+    return [auth.public_user(u) for u in auth.DEMO_ACCOUNTS]
+
+
+@app.post("/api/v1/auth/otp/request")
+def otp_request(r: OtpRequest):
+    phone = auth.normalize_phone(r.phone)
+    if not auth.get_user(phone):
+        raise HTTPException(404, "با این شماره ثبت‌نام نکرده‌اید")
+    return auth.request_otp(phone, "login")
+
+
+@app.post("/api/v1/auth/signup")
+def signup(s: Signup):
+    phone = auth.normalize_phone(s.phone)
+    if auth.get_user(phone):
+        raise HTTPException(409, "این شماره قبلاً ثبت‌نام کرده؛ وارد شوید")
+    if s.role == "seller" and not (s.store_name or "").strip():
+        raise HTTPException(422, "نام فروشگاه را وارد کنید")
+    if s.website and not s.website.startswith("https://"):
+        raise HTTPException(422, "آدرس سایت باید با https:// شروع شود")
+    return auth.request_otp(phone, "signup", s.model_dump())
+
+
+@app.post("/api/v1/auth/otp/verify")
+def otp_verify(v: OtpVerify, response: Response):
+    phone = auth.normalize_phone(v.phone)
+    out = auth.verify_otp(phone, v.code)
+    response.set_cookie(auth.COOKIE, out["token"], max_age=auth.SESSION_TTL, httponly=True, samesite="lax", path="/")
+    return {"user": out["user"]}
+
+
+@app.get("/api/v1/auth/me")
+def me(user: dict | None = Depends(auth.current_user)):
+    return {"user": auth.public_user(user) if user else None}
+
+
+@app.post("/api/v1/auth/logout")
+def logout(response: Response, pm_session: str | None = Cookie(None)):
+    auth.logout(pm_session)
+    response.delete_cookie(auth.COOKIE, path="/")
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------ outbound clicks & demo store page
+@app.get("/api/v1/go/{listing_id}")
+def go(listing_id: str):
+    """Every "buy" click passes through here so it can be counted (the seller dashboard's clicks).
+    In production this redirects to the shop's real URL; the demo has fictional shops, so it opens
+    a demo store page instead."""
+    L = catalog()["listings"].get(listing_id)
+    if not L:
+        raise HTTPException(404, "unknown listing")
+    analytics.record("click", listing_id)
+    return RedirectResponse(f"/store/{L['seller']}/{listing_id}", status_code=307)
+
+
+@app.get("/api/v1/store/{seller_id}/{listing_id}")
+def store_page(seller_id: str, listing_id: str):
+    cat = catalog()
+    L = cat["listings"].get(listing_id)
+    seller = cat["sellers"].get(seller_id)
+    if not L or not seller or L["seller"] != seller_id:
+        raise HTTPException(404, "not found")
+    pid = cat["log"][listing_id]["product"]
+    p = cat["products"].get(pid)
+    offer = next((o for o in p["offers"] if o["listing_id"] == listing_id), None) if p else None
+    others = []
+    for x in cat["listings"].values():
+        if x["seller"] == seller_id and x["id"] != listing_id and len(others) < 4:
+            xp = cat["products"].get(cat["log"][x["id"]]["product"])
+            if xp:
+                others.append({"listing_id": x["id"], "title": x["title"], "price": x["price"], "type": xp["type"],
+                               "species": xp["species"], "brand": xp["brand"], "brand_en": kb.BRANDS.get(xp["brand"]),
+                               "qty_label": xp["qty_label"]})
+    return {"seller": seller, "listing": {"id": L["id"], "title": L["title"], "price": L["price"], "available": L["available"],
+                                          "url": L["url"]},
+            "offer": offer and {k: offer[k] for k in ("price", "shipping", "total", "checked_at")},
+            "product": p and {k: p[k] for k in ("id", "name_fa", "name_en", "brand", "brand_fa", "qty_label", "species", "type", "unit")}
+            | {"brand_en": kb.BRANDS.get(p["brand"])},
+            "others": others}
+
+
+# ------------------------------------------------------------------ seller dashboard
+@app.get("/api/v1/seller/dashboard")
+def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
+    cat = catalog()
+    sid = user.get("seller_id")
+    if not sid:
+        return {"status": "pending", "user": auth.public_user(user),
+                "message": "حساب فروشنده شما ثبت شد و پس از بررسی هویت کسب‌وکار، فید محصولات به فروشگاهتان وصل می‌شود."}
+    seller = cat["sellers"][sid]
+    mine = [L for L in cat["listings"].values() if L["seller"] == sid]
+    ids = [L["id"] for L in mine]
+    series = analytics.daily_series(ids, 30)
+    totals = analytics.per_listing_totals(ids, 30)
+    rows, alerts = [], []
+    for L in mine:
+        pid = cat["log"][L["id"]]["product"]
+        p = cat["products"].get(pid)
+        if not p:
+            rows.append({"listing_id": L["id"], "title": L["title"], "status": "review", "price": L["price"]})
+            continue
+        me_ = next(o for o in p["offers"] if o["listing_id"] == L["id"])
+        rivals = [o for o in p["offers"] if o["available"] and not o["anomaly"] and o["seller_id"] != sid]
+        best_rival = min(rivals, key=lambda o: o["total"]) if rivals else None
+        ranked = sorted([o for o in p["offers"] if o["available"] and not o["anomaly"]], key=lambda o: o["total"])
+        position = next((i + 1 for i, o in enumerate(ranked) if o["listing_id"] == L["id"]), None)
+        v, c = totals.get(L["id"], [0, 0])
+        gap = round((me_["total"] - best_rival["total"]) / best_rival["total"] * 100, 1) if best_rival else None
+        row = {"listing_id": L["id"], "product_id": pid, "name_fa": p["name_fa"], "price": me_["price"],
+               "shipping": me_["shipping"], "total": me_["total"], "available": me_["available"],
+               "stale": me_["stale"], "anomaly": me_["anomaly"], "position": position, "competitors": len(ranked),
+               "best_rival": best_rival and {"seller": best_rival["seller"], "total": best_rival["total"]},
+               "gap_pct": gap, "views": v, "clicks": c, "ctr": round(c / v * 100, 1) if v else 0,
+               "type": p["type"], "species": p["species"], "brand": p["brand"], "brand_en": kb.BRANDS.get(p["brand"]),
+               "qty_label": p["qty_label"]}
+        rows.append(row)
+        if me_["anomaly"]:
+            alerts.append({"level": "bad", "text": f"قیمت «{p['name_fa']}» با بازار نمی‌خواند و در پیشنهادها نمایش داده نمی‌شود."})
+        elif gap is not None and gap > 8 and me_["available"]:
+            alerts.append({"level": "warn", "text": f"«{p['name_fa']}» {gap:g}٪ گران‌تر از ارزان‌ترین رقیب ({best_rival['seller']}) است."})
+        if me_["stale"]:
+            alerts.append({"level": "warn", "text": f"قیمت «{p['name_fa']}» بیش از ۴۸ ساعت به‌روز نشده؛ تا به‌روزرسانی پیشنهاد اول نمی‌شود."})
+        if not me_["available"] and v > 200:
+            alerts.append({"level": "info", "text": f"«{p['name_fa']}» ناموجود است ولی {v} بار دیده شده؛ موجودی را بررسی کنید."})
+    views30 = sum(r[1] for r in series)
+    clicks30 = sum(r[2] for r in series)
+    rows.sort(key=lambda r: -r.get("clicks", 0))
+    return {
+        "status": "active", "user": auth.public_user(user), "seller": seller,
+        "kpis": {"listings": len(mine), "in_stock": sum(L["available"] for L in mine),
+                 "views_30d": views30, "clicks_30d": clicks30, "ctr": round(clicks30 / views30 * 100, 1) if views30 else 0,
+                 "clicks_today": series[-1][2], "clicks_yesterday": series[-2][2],
+                 "first_place": sum(1 for r in rows if r.get("position") == 1)},
+        "series": series, "listings": rows, "alerts": alerts[:8],
+    }
+
+
 # ------------------------------------------------------------------ admin API (server-side access control)
-def require_admin(x_admin_token: str = Header("")):
-    if not secrets.compare_digest(x_admin_token, ADMIN_TOKEN):
-        raise HTTPException(401, "admin token required")
+require_admin = auth.require_role("admin")
+
+
+@app.get("/api/v1/admin/analytics", dependencies=[Depends(require_admin)])
+def admin_analytics():
+    cat = catalog()
+    products = list(cat["products"].values())
+    offers = [o for p in products for o in p["offers"]]
+    per_seller = {}
+    totals = analytics.per_listing_totals(None, 30)
+    for s in cat["sellers"].values():
+        mine = [o for o in offers if o["seller_id"] == s["id"]]
+        clicks = sum(totals.get(o["listing_id"], [0, 0])[1] for o in mine)
+        per_seller[s["id"]] = {"name": s["name"], "color": s.get("color", "#13566c"), "listings": len(mine),
+                               "in_stock": sum(o["available"] for o in mine), "stale": sum(o["stale"] for o in mine),
+                               "anomalies": sum(bool(o["anomaly"]) for o in mine), "clicks": clicks, "rating": s["rating"]}
+    ages = [o["age_hours"] for o in offers]
+    buckets = [("< ۶ ساعت", 0, 6), ("۶–۲۴ ساعت", 6, 24), ("۱–۲ روز", 24, 48), ("> ۲ روز", 48, 10 ** 6)]
+    cats = {}
+    for p in products:
+        k = f'{kb.FA_LABEL[p["type"]]} {kb.FA_LABEL[p["species"]]}' if p["type"] != "litter" else "خاک گربه"
+        cats[k] = cats.get(k, 0) + 1
+    users = auth.all_users()
+    s = cat["stats"]
+    return {
+        "traffic": analytics.daily_series(None, 30),
+        "search": analytics.search_stats(30),
+        "sellers": list(per_seller.values()),
+        "freshness": [{"label": lbl, "count": sum(lo <= a < hi for a in ages)} for lbl, lo, hi in buckets],
+        "matching": [{"label": "ادغام خودکار", "count": s["auto"]}, {"label": "محصول جدید (مرجع)", "count": s["new"]},
+                     {"label": "تأیید انسانی", "count": s["approved"]}, {"label": "در صف بررسی", "count": s["review"]}],
+        "categories": sorted([{"label": k, "count": v} for k, v in cats.items()], key=lambda x: -x["count"]),
+        "users": {"total": len(users), "by_role": {r: sum(u["role"] == r for u in users) for r in auth.ROLES},
+                  "pending_sellers": [auth.public_user(u) for u in users if u.get("status") == "pending"]},
+        "offers": {"total": len(offers), "in_stock": sum(o["available"] for o in offers),
+                   "anomalies": sum(bool(o["anomaly"]) for o in offers), "stale": sum(o["stale"] for o in offers)},
+    }
 
 
 @app.get("/api/v1/admin/pipeline", dependencies=[Depends(require_admin)])
@@ -313,7 +505,11 @@ def admin_pipeline():
                                             titles=[o["raw_title"] for o in prods[c["pid"]]["offers"][:3]])
                                        for c in r["candidates"]]))
     samples = []
-    for L in list(cat["listings"].values())[::7][:14]:
+    seen = set()
+    for L in cat["listings"].values():   # one or two examples from every store format
+        if sum(1 for x in seen if x[0] == L["seller"]) >= 2:
+            continue
+        seen.add((L["seller"], L["id"]))
         a = L["attrs"]
         samples.append(dict(seller=cat["sellers"][L["seller"]]["name"], raw=L["title"], extra=L["extra"],
                             raw_price=_raw_price(L), price=L["price"], normalized=a["normalized"],
@@ -327,7 +523,7 @@ def admin_pipeline():
 
 def _raw_price(L):
     r = L["raw"]
-    for k in ("price_toman", "price_irr", "price"):
+    for k in ("price_toman", "price_irr", "price", "gheymat"):
         if k in r:
             v = r[k]
             return f'{v["amount"]} {v["currency"]}' if isinstance(v, dict) else f"{v}" + (" ریال" if k == "price_irr" else "")
@@ -362,10 +558,6 @@ def reset():
     return {"ok": True}
 
 
-# ------------------------------------------------------------------ frontend
-app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
-
-
 @app.get("/")
 def index():
-    return FileResponse(FRONTEND / "index.html")
+    return {"name": "PetMatch API", "docs": "/docs", "frontend": "http://localhost:3000"}

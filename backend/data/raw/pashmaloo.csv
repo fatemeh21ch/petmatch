@@ -1,26 +1,37 @@
 ref,title,price,stock,url,updated
-pas-001,رویال کنین kitten گربه 400 gr,840 هزار تومان,yes,https://pashmaloo.example/pas-001,2026-11-06T13:31+00:00
-pas-002,رویال کنین indoor 27 گربه 2 KG,"3,310 هزار تومان",yes,https://pashmaloo.example/pas-002,2026-11-11T00:56+00:00
-pas-003,رویال کانین fit 32 گربه 2 KG,"3,450 هزار تومان",yes,https://pashmaloo.example/pas-003,2026-11-10T15:37+00:00
-pas-004,رفلکس پلاس adult chicken گربه 1.5kg,"1,480 هزار تومان",yes,https://pashmaloo.example/pas-004,2026-11-10T10:38+00:00
-pas-005,رفلکس پلاص kitten chicken گربه 1.5 KG,"1,490 هزار تومان",yes,https://pashmaloo.example/pas-005,2026-11-06T03:06+00:00
-pas-006,رفلکس پلاص adult salmon گربه 15000g,"9,600 هزار تومان",yes,https://pashmaloo.example/pas-006,2026-11-10T15:43+00:00
-pas-007,جوزرا catelux duck گربه 2000g,"2,400 هزار تومان",yes,https://pashmaloo.example/pas-007,2026-11-10T22:03+00:00
-pas-008,بریت کر grain free kitten chicken گربه 2 KG,"2,580 هزار تومان",yes,https://pashmaloo.example/pas-008,2026-11-11T07:33+00:00
-pas-009,بریت کر grain free adult salmon گربه 2kg,"2,500 هزار تومان",yes,https://pashmaloo.example/pas-009,2026-11-10T17:14+00:00
-pas-010,مونژه natural tuna گربه 80g,130 هزار تومان,yes,https://pashmaloo.example/pas-010,2026-11-08T09:20+00:00
-pas-011,رویال کانین kitten gravy pouch گربه 85 gr,130 هزار تومان,yes,https://pashmaloo.example/pas-011,2026-11-10T11:08+00:00
-pas-012,رویال کانین mini adult سگ 2 KG,"3,080 هزار تومان",yes,https://pashmaloo.example/pas-012,2026-11-10T15:15+00:00
-pas-013,رویال‌کنین medium adult سگ 4000g,"4,960 هزار تومان",yes,https://pashmaloo.example/pas-013,2026-11-10T12:28+00:00
-pas-014,رفلکس پلاص medium large adult lamb سگ 3kg,"2,060 هزار تومان",yes,https://pashmaloo.example/pas-014,2026-11-10T13:34+00:00
-pas-015,بریت کیر puppy lamb rice سگ 3 KG,"3,130 هزار تومان",yes,https://pashmaloo.example/pas-015,2026-11-10T17:35+00:00
-pas-016,جوسرا mini junior duck سگ 900 gr,"1,000 هزار تومان",yes,https://pashmaloo.example/pas-016,2026-11-10T10:53+00:00
-pas-017,خاک اورکلین extra strong unscented گربه 6 Liter,"1,810 هزار تومان",yes,https://pashmaloo.example/pas-017,2026-11-07T17:31+00:00
-pas-018,خاک اورکلین extra strong lavender گربه 6L,"1,770 هزار تومان",yes,https://pashmaloo.example/pas-018,2026-11-11T05:44+00:00
-pas-019,خاک کت بست original unscented گربه 10L,"1,150 هزار تومان",yes,https://pashmaloo.example/pas-019,2026-11-10T20:20+00:00
-pas-020,خاک پارس لیتر bentonite unscented گربه 10 KG,440 هزار تومان,yes,https://pashmaloo.example/pas-020,2026-11-11T10:16+00:00
-pas-021,تشویقی کت ایت creamy salmon گربه 75 gr,210 هزار تومان,yes,https://pashmaloo.example/pas-021,2026-11-11T04:32+00:00
-pas-022,تشویقی پدیگری dentastix mini سگ 110g,240 هزار تومان,yes,https://pashmaloo.example/pas-022,2026-11-06T22:08+00:00
-pas-023,تشویقی جیم کت malt soft paste گربه 50 gr,320 هزار تومان,no,https://pashmaloo.example/pas-023,2026-11-10T23:50+00:00
-pas-024,غذای گربه رویال کنین ۲ کیلو,"3,190 هزار تومان",yes,https://pashmaloo.example/pas-024,2026-11-10T18:47+00:00
-pas-025,رویال کانین indoor 27 گربه 2kg,"1,150 هزار تومان",yes,https://pashmaloo.example/pas-025,2026-11-11T10:30+00:00
+pas-001,رویال کانین kitten گربه 2 KG,"3,430 هزار تومان",yes,https://pashmaloo.example/pas-001,2026-11-06T14:22+00:00
+pas-002,رویال کنین kitten گربه 400 gr,860 هزار تومان,yes,https://pashmaloo.example/pas-002,2026-11-08T03:18+00:00
+pas-003,رویال کانین indoor 27 گربه 400 gr,890 هزار تومان,no,https://pashmaloo.example/pas-003,2026-11-11T11:35+00:00
+pas-004,رویال کانین fit 32 گربه 2000g,"3,440 هزار تومان",yes,https://pashmaloo.example/pas-004,2026-11-07T06:02+00:00
+pas-005,رویال کانین sterilised 37 گربه 2 KG,"3,730 هزار تومان",yes,https://pashmaloo.example/pas-005,2026-11-11T17:08+00:00
+pas-006,رویال کنین persian adult گربه 2kg,"3,870 هزار تومان",yes,https://pashmaloo.example/pas-006,2026-11-10T22:17+00:00
+pas-007,رفلکس پلاس adult salmon گربه 15000g,"10,350 هزار تومان",yes,https://pashmaloo.example/pas-007,2026-11-11T10:33+00:00
+pas-008,رفلکس پلاص sterilised chicken گربه 1.5 KG,"1,450 هزار تومان",yes,https://pashmaloo.example/pas-008,2026-11-10T20:00+00:00
+pas-009,جوزرا catelux duck گربه 2 KG,"2,540 هزار تومان",yes,https://pashmaloo.example/pas-009,2026-11-11T00:38+00:00
+pas-010,جوسرا carismo senior گربه 2kg,"2,670 هزار تومان",yes,https://pashmaloo.example/pas-010,2026-11-11T11:08+00:00
+pas-011,بریت کیر grain free kitten chicken گربه 2kg,"2,300 هزار تومان",yes,https://pashmaloo.example/pas-011,2026-11-11T03:01+00:00
+pas-012,ویسکاز adult tuna گربه 1400g,"1,120 هزار تومان",yes,https://pashmaloo.example/pas-012,2026-11-08T20:36+00:00
+pas-013,ویسکاس kitten chicken گربه 1.4 KG,"1,110 هزار تومان",yes,https://pashmaloo.example/pas-013,2026-11-11T01:49+00:00
+pas-014,پروپلان sterilised adult salmon گربه 1.5 KG,"3,120 هزار تومان",yes,https://pashmaloo.example/pas-014,2026-11-11T16:14+00:00
+pas-015,هیلز adult chicken گربه 1500g,"3,590 هزار تومان",yes,https://pashmaloo.example/pas-015,2026-11-11T00:22+00:00
+pas-016,غذای تر مونژ natural chicken گربه 80g,150 هزار تومان,no,https://pashmaloo.example/pas-016,2026-11-08T00:58+00:00
+pas-017,غذای تر رویال‌کنین kitten gravy pouch گربه 85 gr,130 هزار تومان,yes,https://pashmaloo.example/pas-017,2026-11-07T20:35+00:00
+pas-018,غذای تر رویال کانین sterilised gravy pouch گربه 85g,130 هزار تومان,yes,https://pashmaloo.example/pas-018,2026-11-11T06:16+00:00
+pas-019,غذای تر ویسکاس adult tuna pouch گربه 85g,60 هزار تومان,yes,https://pashmaloo.example/pas-019,2026-11-11T16:16+00:00
+pas-020,خاک اور کلین extra strong unscented گربه 10L,"2,460 هزار تومان",yes,https://pashmaloo.example/pas-020,2026-11-08T16:48+00:00
+pas-021,خاک کتس بست original unscented گربه 10L,"1,090 هزار تومان",yes,https://pashmaloo.example/pas-021,2026-11-11T19:39+00:00
+pas-022,خاک پارس لیتر bentonite lavender گربه 5000g,280 هزار تومان,no,https://pashmaloo.example/pas-022,2026-11-10T21:32+00:00
+pas-023,تشویقی دریمیز chicken گربه 60 gr,190 هزار تومان,no,https://pashmaloo.example/pas-023,2026-11-07T10:04+00:00
+pas-024,تشویقی کتیت creamy salmon گربه 75 gr,230 هزار تومان,no,https://pashmaloo.example/pas-024,2026-11-07T02:56+00:00
+pas-025,تشویقی کتیت creamy chicken گربه 75g,220 هزار تومان,yes,https://pashmaloo.example/pas-025,2026-11-11T15:39+00:00
+pas-026,رویال کانین mini puppy سگ 2000g,"2,900 هزار تومان",yes,https://pashmaloo.example/pas-026,2026-11-10T19:56+00:00
+pas-027,رویال کنین medium adult سگ 4kg,"5,120 هزار تومان",yes,https://pashmaloo.example/pas-027,2026-11-07T10:37+00:00
+pas-028,رفلکس پلاص medium large puppy chicken سگ 3 KG,"2,120 هزار تومان",yes,https://pashmaloo.example/pas-028,2026-11-07T12:33+00:00
+pas-029,بریت کیر puppy lamb rice سگ 3 KG,"2,770 هزار تومان",yes,https://pashmaloo.example/pas-029,2026-11-11T10:33+00:00
+pas-030,بریت کر adult medium lamb rice سگ 3 KG,"2,760 هزار تومان",yes,https://pashmaloo.example/pas-030,2026-11-11T08:54+00:00
+pas-031,جوزرا mini junior duck سگ 900 gr,950 هزار تومان,yes,https://pashmaloo.example/pas-031,2026-11-11T13:23+00:00
+pas-032,غذای تر رویال کانین mini adult pouch سگ 85 gr,110 هزار تومان,yes,https://pashmaloo.example/pas-032,2026-11-11T04:12+00:00
+pas-033,تشویقی پدیگری dentastix mini سگ 110g,240 هزار تومان,no,https://pashmaloo.example/pas-033,2026-11-10T21:09+00:00
+pas-034,تشویقی پدیگری dentastix medium سگ 180g,360 هزار تومان,no,https://pashmaloo.example/pas-034,2026-11-08T15:58+00:00
+pas-035,غذای گربه رویال کنین ۲ کیلو,"3,190 هزار تومان",yes,https://pashmaloo.example/pas-035,2026-11-11T05:03+00:00
+pas-036,رویال کانین indoor 27 گربه 2kg,"1,150 هزار تومان",yes,https://pashmaloo.example/pas-036,2026-11-11T14:29+00:00

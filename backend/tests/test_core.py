@@ -152,3 +152,65 @@ def test_admin_requires_token():
 def test_input_validation():
     assert client.get("/api/v1/search", params={"q": "x" * 500}).status_code == 422
     assert client.get("/api/v1/search", params={"q": "a", "pet": "{bad json"}).status_code == 400
+
+
+# ---------------------------------------------------------------- auth, roles, seller & click tracking
+from app import auth  # noqa: E402
+
+
+def _login(c, phone):
+    code = c.post("/api/v1/auth/otp/request", json={"phone": phone}).json()["demo_code"]
+    r = c.post("/api/v1/auth/otp/verify", json={"phone": phone, "code": code})
+    assert r.status_code == 200, r.text
+    return r.json()["user"]
+
+
+def _fresh():
+    auth._sends.clear()
+    auth._otps.clear()
+    return TestClient(app)
+
+
+def test_otp_login_each_role_and_role_checks():
+    for phone, role in [("09120000001", "buyer"), ("09120000002", "seller"), ("09120000003", "admin")]:
+        c = _fresh()
+        assert _login(c, phone)["role"] == role
+        assert c.get("/api/v1/auth/me").json()["user"]["role"] == role
+        seller = c.get("/api/v1/seller/dashboard").status_code
+        admin = c.get("/api/v1/admin/analytics").status_code
+        assert (seller, admin) == {"buyer": (403, 403), "seller": (200, 403), "admin": (403, 200)}[role]
+
+
+def test_otp_wrong_code_expiry_and_resend_limit():
+    c = _fresh()
+    c.post("/api/v1/auth/otp/request", json={"phone": "۰۹۱۲۰۰۰۰۰۰۱"})          # Persian digits accepted
+    assert c.post("/api/v1/auth/otp/request", json={"phone": "09120000001"}).status_code == 429   # resend too soon
+    assert c.post("/api/v1/auth/otp/verify", json={"phone": "09120000001", "code": "00000"}).status_code == 400
+    assert c.get("/api/v1/auth/me").json()["user"] is None
+    assert c.post("/api/v1/auth/otp/request", json={"phone": "123"}).status_code == 422
+    assert c.post("/api/v1/auth/otp/request", json={"phone": "09129999999"}).status_code == 404   # not registered
+
+
+def test_signup_seller_is_pending_and_admin_cannot_self_register():
+    c = _fresh()
+    assert c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "تست", "role": "admin"}).status_code == 422
+    assert c.post("/api/v1/auth/signup", json={"phone": "09120000001", "name": "تست", "role": "buyer"}).status_code == 409
+    r = c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller", "store_name": "تست"})
+    code = r.json()["demo_code"]
+    u = c.post("/api/v1/auth/otp/verify", json={"phone": "09121112233", "code": code}).json()["user"]
+    assert u["role"] == "seller" and u["status"] == "pending"
+    assert c.get("/api/v1/seller/dashboard").json()["status"] == "pending"
+    users = [x for x in json.loads(auth.USERS_FILE.read_text("utf-8")) if x["phone"] != "09121112233"]
+    auth.USERS_FILE.write_text(json.dumps(users, ensure_ascii=False), "utf-8")   # clean up
+
+
+def test_outbound_click_is_counted_and_opens_demo_store():
+    c = _fresh()
+    _login(c, "09120000002")
+    before = c.get("/api/v1/seller/dashboard").json()["kpis"]["clicks_today"]
+    lid = next(L for L in c.get("/api/v1/seller/dashboard").json()["listings"] if L.get("product_id"))["listing_id"]
+    r = c.get(f"/api/v1/go/{lid}", follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == f"/store/petkade/{lid}"
+    assert c.get("/api/v1/seller/dashboard").json()["kpis"]["clicks_today"] == before + 1
+    page = c.get(f"/api/v1/store/petkade/{lid}").json()
+    assert page["seller"]["id"] == "petkade" and page["listing"]["id"] == lid

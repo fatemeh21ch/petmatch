@@ -1,0 +1,472 @@
+{
+ "products": [
+  {
+   "sku": "koo-001",
+   "product": "Royal Canin Kitten for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 0.4,
+    "unit": "kg"
+   },
+   "price_toman": 830000,
+   "in_stock": false,
+   "url": "https://koochepet.example/shop/koo-001",
+   "updated_at": "2026-11-11T20:21+00:00"
+  },
+  {
+   "sku": "koo-002",
+   "product": "Royal Canin Indoor 27 for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 0.4,
+    "unit": "kg"
+   },
+   "price_toman": 880000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-002",
+   "updated_at": "2026-11-11T11:44+00:00"
+  },
+  {
+   "sku": "koo-003",
+   "product": "Royal Canin Fit 32 for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 2.0,
+    "unit": "kg"
+   },
+   "price_toman": 3140000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-003",
+   "updated_at": "2026-11-11T12:57+00:00"
+  },
+  {
+   "sku": "koo-004",
+   "product": "Royal Canin Sterilised 37 for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 2.0,
+    "unit": "kg"
+   },
+   "price_toman": 3360000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-004",
+   "updated_at": "2026-11-11T04:15+00:00"
+  },
+  {
+   "sku": "koo-005",
+   "product": "Reflex Plus Adult Chicken for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.5,
+    "unit": "kg"
+   },
+   "price_toman": 1410000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-005",
+   "updated_at": "2026-11-10T22:53+00:00"
+  },
+  {
+   "sku": "koo-006",
+   "product": "Reflex Plus Kitten Chicken for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.5,
+    "unit": "kg"
+   },
+   "price_toman": 1300000,
+   "in_stock": false,
+   "url": "https://koochepet.example/shop/koo-006",
+   "updated_at": "2026-11-11T10:28+00:00"
+  },
+  {
+   "sku": "koo-007",
+   "product": "Reflex Plus Adult Salmon for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 15.0,
+    "unit": "kg"
+   },
+   "price_toman": 10140000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-007",
+   "updated_at": "2026-11-10T23:38+00:00"
+  },
+  {
+   "sku": "koo-008",
+   "product": "Josera Carismo Senior for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 2.0,
+    "unit": "kg"
+   },
+   "price_toman": 2660000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-008",
+   "updated_at": "2026-11-11T08:48+00:00"
+  },
+  {
+   "sku": "koo-009",
+   "product": "Brit Care Grain Free Kitten Chicken for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 2.0,
+    "unit": "kg"
+   },
+   "price_toman": 2590000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-009",
+   "updated_at": "2026-11-11T10:11+00:00"
+  },
+  {
+   "sku": "koo-010",
+   "product": "Brit Care Grain Free Adult Salmon for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 2.0,
+    "unit": "kg"
+   },
+   "price_toman": 2200000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-010",
+   "updated_at": "2026-11-11T04:00+00:00"
+  },
+  {
+   "sku": "koo-011",
+   "product": "Farmina N&D Pumpkin Chicken Adult for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.5,
+    "unit": "kg"
+   },
+   "price_toman": 3880000,
+   "in_stock": false,
+   "url": "https://koochepet.example/shop/koo-011",
+   "updated_at": "2026-11-11T04:10+00:00"
+  },
+  {
+   "sku": "koo-012",
+   "product": "Whiskas Adult Tuna for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.4,
+    "unit": "kg"
+   },
+   "price_toman": 970000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-012",
+   "updated_at": "2026-11-11T01:59+00:00"
+  },
+  {
+   "sku": "koo-013",
+   "product": "Whiskas Kitten Chicken for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.4,
+    "unit": "kg"
+   },
+   "price_toman": 1010000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-013",
+   "updated_at": "2026-11-10T20:20+00:00"
+  },
+  {
+   "sku": "koo-014",
+   "product": "Pro Plan Kitten Chicken for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.5,
+    "unit": "kg"
+   },
+   "price_toman": 3050000,
+   "in_stock": false,
+   "url": "https://koochepet.example/shop/koo-014",
+   "updated_at": "2026-11-11T08:11+00:00"
+  },
+  {
+   "sku": "koo-015",
+   "product": "Hill's Adult Chicken for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.5,
+    "unit": "kg"
+   },
+   "price_toman": 3070000,
+   "in_stock": false,
+   "url": "https://koochepet.example/shop/koo-015",
+   "updated_at": "2026-11-10T23:28+00:00"
+  },
+  {
+   "sku": "koo-016",
+   "product": "Monge Natural Tuna for Cats",
+   "category": "Wet Food",
+   "pack": {
+    "value": 0.08,
+    "unit": "kg"
+   },
+   "price_toman": 150000,
+   "in_stock": false,
+   "url": "https://koochepet.example/shop/koo-016",
+   "updated_at": "2026-11-11T05:09+00:00"
+  },
+  {
+   "sku": "koo-017",
+   "product": "Monge Natural Chicken for Cats",
+   "category": "Wet Food",
+   "pack": {
+    "value": 0.08,
+    "unit": "kg"
+   },
+   "price_toman": 130000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-017",
+   "updated_at": "2026-11-11T17:38+00:00"
+  },
+  {
+   "sku": "koo-018",
+   "product": "Royal Canin Kitten Gravy Pouch for Cats",
+   "category": "Wet Food",
+   "pack": {
+    "value": 0.085,
+    "unit": "kg"
+   },
+   "price_toman": 130000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-018",
+   "updated_at": "2026-11-10T22:27+00:00"
+  },
+  {
+   "sku": "koo-019",
+   "product": "Whiskas Adult Tuna Pouch for Cats",
+   "category": "Wet Food",
+   "pack": {
+    "value": 0.085,
+    "unit": "kg"
+   },
+   "price_toman": 70000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-019",
+   "updated_at": "2026-11-11T11:43+00:00"
+  },
+  {
+   "sku": "koo-020",
+   "product": "Whiskas Adult Chicken Pouch for Cats",
+   "category": "Wet Food",
+   "pack": {
+    "value": 0.085,
+    "unit": "kg"
+   },
+   "price_toman": 70000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-020",
+   "updated_at": "2026-11-11T11:03+00:00"
+  },
+  {
+   "sku": "koo-021",
+   "product": "Ever Clean Extra Strong Unscented for Cats",
+   "category": "Litter",
+   "pack": {
+    "value": 10.0,
+    "unit": "L"
+   },
+   "price_toman": 2550000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-021",
+   "updated_at": "2026-11-11T08:35+00:00"
+  },
+  {
+   "sku": "koo-022",
+   "product": "Cat's Best Original Unscented for Cats",
+   "category": "Litter",
+   "pack": {
+    "value": 10.0,
+    "unit": "L"
+   },
+   "price_toman": 1150000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-022",
+   "updated_at": "2026-11-11T02:23+00:00"
+  },
+  {
+   "sku": "koo-023",
+   "product": "Cat's Best Original Unscented for Cats",
+   "category": "Litter",
+   "pack": {
+    "value": 20.0,
+    "unit": "L"
+   },
+   "price_toman": 2170000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-023",
+   "updated_at": "2026-11-11T01:28+00:00"
+  },
+  {
+   "sku": "koo-024",
+   "product": "ParsLitter Bentonite Unscented for Cats",
+   "category": "Litter",
+   "pack": {
+    "value": 10.0,
+    "unit": "kg"
+   },
+   "price_toman": 410000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-024",
+   "updated_at": "2026-11-11T15:36+00:00"
+  },
+  {
+   "sku": "koo-025",
+   "product": "ParsLitter Bentonite Lavender for Cats",
+   "category": "Litter",
+   "pack": {
+    "value": 5.0,
+    "unit": "kg"
+   },
+   "price_toman": 270000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-025",
+   "updated_at": "2026-11-11T01:45+00:00"
+  },
+  {
+   "sku": "koo-026",
+   "product": "Dreamies Salmon for Cats",
+   "category": "Treat",
+   "pack": {
+    "value": 0.06,
+    "unit": "kg"
+   },
+   "price_toman": 200000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-026",
+   "updated_at": "2026-11-10T19:57+00:00"
+  },
+  {
+   "sku": "koo-027",
+   "product": "GimCat Malt Soft Paste for Cats",
+   "category": "Treat",
+   "pack": {
+    "value": 0.05,
+    "unit": "kg"
+   },
+   "price_toman": 340000,
+   "in_stock": false,
+   "url": "https://koochepet.example/shop/koo-027",
+   "updated_at": "2026-11-11T15:34+00:00"
+  },
+  {
+   "sku": "koo-028",
+   "product": "Royal Canin Mini Adult for Dogs",
+   "category": "Dry Food",
+   "pack": {
+    "value": 2.0,
+    "unit": "kg"
+   },
+   "price_toman": 2940000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-028",
+   "updated_at": "2026-11-11T05:58+00:00"
+  },
+  {
+   "sku": "koo-029",
+   "product": "Reflex Plus Medium Large Adult Lamb for Dogs",
+   "category": "Dry Food",
+   "pack": {
+    "value": 3.0,
+    "unit": "kg"
+   },
+   "price_toman": 2030000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-029",
+   "updated_at": "2026-11-11T10:41+00:00"
+  },
+  {
+   "sku": "koo-030",
+   "product": "Reflex Plus Medium Large Puppy Chicken for Dogs",
+   "category": "Dry Food",
+   "pack": {
+    "value": 3.0,
+    "unit": "kg"
+   },
+   "price_toman": 2040000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-030",
+   "updated_at": "2026-11-11T00:15+00:00"
+  },
+  {
+   "sku": "koo-031",
+   "product": "Brit Care Puppy Lamb Rice for Dogs",
+   "category": "Dry Food",
+   "pack": {
+    "value": 3.0,
+    "unit": "kg"
+   },
+   "price_toman": 2810000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-031",
+   "updated_at": "2026-11-10T19:32+00:00"
+  },
+  {
+   "sku": "koo-032",
+   "product": "Josera Mini Junior Duck for Dogs",
+   "category": "Dry Food",
+   "pack": {
+    "value": 0.9,
+    "unit": "kg"
+   },
+   "price_toman": 1060000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-032",
+   "updated_at": "2026-11-10T19:53+00:00"
+  },
+  {
+   "sku": "koo-033",
+   "product": "Royal Canin Mini Adult Pouch for Dogs",
+   "category": "Wet Food",
+   "pack": {
+    "value": 0.085,
+    "unit": "kg"
+   },
+   "price_toman": 120000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-033",
+   "updated_at": "2026-11-11T12:32+00:00"
+  },
+  {
+   "sku": "koo-034",
+   "product": "Pedigree Dentastix Mini for Dogs",
+   "category": "Treat",
+   "pack": {
+    "value": 0.11,
+    "unit": "kg"
+   },
+   "price_toman": 260000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-034",
+   "updated_at": "2026-11-11T05:10+00:00"
+  },
+  {
+   "sku": "koo-035",
+   "product": "Pedigree Dentastix Medium for Dogs",
+   "category": "Treat",
+   "pack": {
+    "value": 0.18,
+    "unit": "kg"
+   },
+   "price_toman": 390000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-035",
+   "updated_at": "2026-11-11T08:17+00:00"
+  },
+  {
+   "sku": "koo-036",
+   "product": "Whiskas Adult Tuna for Cats",
+   "category": "Dry Food",
+   "pack": {
+    "value": 1.4,
+    "unit": "kg"
+   },
+   "price_toman": 590000,
+   "in_stock": true,
+   "url": "https://koochepet.example/shop/koo-036",
+   "updated_at": "2026-11-10T22:44+00:00"
+  }
+ ]
+}

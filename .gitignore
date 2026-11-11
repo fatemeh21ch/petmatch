@@ -16,3 +16,8 @@ backend/data/reports.json
 # saved copy of the ChatGPT design conversation (third-party images & scripts) — kept locally only
 توضیح انتخاب بازار.html
 توضیح انتخاب بازار_files/
+
+# runtime data (logins, live analytics)
+backend/data/users.json
+backend/data/events.json
+backend/data/search_log.json

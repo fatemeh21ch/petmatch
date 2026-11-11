@@ -29,6 +29,8 @@ REVIEW = 0.75
 STALE_HOURS = 48
 # attribute groups that must agree for two listings to be the same product
 GROUPS = ("stage", "line", "numbers", "flavor", "variant", "size")
+# groups where "only the new listing mentions it" means a different, more specific product
+SPECIFIC_GROUPS = {"line", "numbers", "flavor", "variant"}
 GROUP_FA = {"stage": "رده سنی", "line": "مدل", "numbers": "شماره مدل", "flavor": "طعم", "variant": "ویژگی",
             "size": "سایز نژاد"}
 
@@ -61,6 +63,14 @@ def _ingest():
                         extra=f'{r["specs"]["weight"]} {r["specs"]["category"]}',
                         price=int(r["price"]["amount"]) * (1 if r["price"]["currency"] == "IRT" else 0.1),
                         available=r["inventory"] > 0, url=r["url"], checked=r["synced_at"], raw=r))
+    for r in _read_csv("panjetala.csv"):
+        out.append(dict(id=r["kala_id"], seller="panjetala", title=r["onvan"], extra="",
+                        price=_digits(r["gheymat"]) // (10 if "ریال" in r["gheymat"] else 1),
+                        available=normalize(r["mojoodi"]) == "در انبار", url=r["link"], checked=r["zaman"], raw=r))
+    for r in json.loads((RAW / "koochepet.json").read_text("utf-8"))["products"]:
+        pack = r["pack"]
+        out.append(dict(id=r["sku"], seller="koochepet", title=r["product"], extra=f'{pack["value"]:g} {pack["unit"]} {r["category"]}',
+                        price=int(r["price_toman"]), available=bool(r["in_stock"]), url=r["url"], checked=r["updated_at"], raw=r))
     for r in _read_csv("pashmaloo.csv"):
         mult = 1000 if "هزار" in r["price"] else 1
         out.append(dict(id=r["ref"], seller="pashmaloo", title=r["title"], extra="", price=_digits(r["price"]) * mult,
@@ -120,6 +130,10 @@ def compare(a, b):
         vb = [vb] if isinstance(vb, str) else (vb or [])
         if va and vb and set(va) != set(vb):
             conflicts.append(f"{GROUP_FA[g]} متفاوت ({'/'.join(va)} ≠ {'/'.join(vb)})")
+        elif va and not vb and g in SPECIFIC_GROUPS:
+            # the new listing names a line/flavor/variant the existing product doesn't have:
+            # it is a *more specific* product (Sterilised Chicken vs Adult Chicken), not a vaguer copy
+            conflicts.append(f"«{GROUP_FA[g]}» فقط در آگهی جدید آمده ({'/'.join(va)})؛ محصول مشخص‌تری است")
         elif bool(va) != bool(vb):
             uncertain.append(f"«{GROUP_FA[g]}» در یکی از آگهی‌ها ذکر نشده")
     if not a["type"] or not b["type"]:

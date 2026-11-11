@@ -1,17 +1,20 @@
-"use strict";
+/* Hand-drawn SVG art (ported from the first vanilla version). Every string interpolated from data goes
+   through svgEsc, so these are safe to render with dangerouslySetInnerHTML. */
 /* Hand-drawn SVG art: product packages, pets for banners, category line icons.
    No stock photos or brand logos — every package is generated from catalog data. */
 
-const BRAND_COLORS = {
+export const BRAND_COLORS: Record<string, any> = {
   royal_canin: ["#c62f3b", "#9e1f2a"], reflex: ["#2f6fb5", "#1f4f86"], josera: ["#3f8b4e", "#2c6638"],
   brit: ["#6a4aa5", "#4e3480"], farmina: ["#e0892b", "#b86a18"], monge: ["#1f8f8a", "#166b67"],
   ever_clean: ["#3b8fd0", "#2a6ea4"], cats_best: ["#7f9b3a", "#5f7a26"], pars_litter: ["#8a6f55", "#6a523c"],
   dreamies: ["#7b3fa0", "#5a2a7a"], catit: ["#ef6f6c", "#cf4f4c"], pedigree: ["#d8a31c", "#b5850e"],
   gimcat: ["#e5543d", "#bf3c28"],
+  whiskas: ["#7b2d8e", "#5b1f6a"], proplan: ["#1d3f7a", "#122a55"], hills: ["#1f6fb2", "#165287"],
 };
-const svgEsc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+const svgEsc = (s: any) => String(s ?? "").replace(/[&<>"]/g, (c) => ESC[c]);
 
-function petBadge(species, x, y, s = 1, color = "#fff") {
+export function petBadge(species: string, x: number, y: number, s = 1, color = "#fff") {
   // tiny cat/dog face used on package labels
   if (species === "dog") {
     return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}">
@@ -22,13 +25,14 @@ function petBadge(species, x, y, s = 1, color = "#fff") {
     <path d="M-9 -2 L-8 -12 L-2 -6 L2 -6 L8 -12 L9 -2 A9 8 0 1 1 -9 -2 Z"/></g>`;
 }
 
-function pkgSVG(p, size = 200) {
+export function pkgSVG(p: any, size = 200) {
   const [c1, c2] = BRAND_COLORS[p.brand] || ["#5b7c8a", "#3e5c69"];
   const name = svgEsc(p.brand_en || "");
   const qty = svgEsc((p.qty_label || "").replace(/کیلوگرم/, "kg").replace(/گرم/, "g").replace(/لیتر/, "L"));
-  const id = "g" + Math.random().toString(36).slice(2, 8);
+  // deterministic id: the same markup must come out on the server and in the browser (hydration)
+  const id = "g" + [p.brand, p.type, p.qty_label, size].join("-").replace(/[^a-z0-9-]/gi, "");
   const defs = `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
-  const label = (y, w = 84) => `<rect x="${100 - w / 2}" y="${y}" width="${w}" height="34" rx="8" fill="#fff" opacity=".95"/>
+  const label = (y: number, w = 84) => `<rect x="${100 - w / 2}" y="${y}" width="${w}" height="34" rx="8" fill="#fff" opacity=".95"/>
      <text x="100" y="${y + 15}" text-anchor="middle" font-size="12" font-weight="800" fill="${c2}" font-family="Arial, sans-serif">${name}</text>
      <text x="100" y="${y + 28}" text-anchor="middle" font-size="9.5" fill="#5a6a70" font-family="Arial, sans-serif">${qty}</text>`;
   let body = "";
@@ -70,7 +74,7 @@ function pkgSVG(p, size = 200) {
 }
 
 /* ---------- banner pets ---------- */
-function catArt({ glasses = false, color = "#f0a35e", belly = "#fbe3c6" } = {}) {
+export function catArt({ glasses = false, color = "#f0a35e", belly = "#fbe3c6" } = {}) {
   return `<svg viewBox="0 0 220 220" aria-hidden="true" style="direction:ltr">
     <ellipse cx="110" cy="206" rx="70" ry="9" fill="#000" opacity=".12"/>
     <path d="M150 190 C200 190 205 140 178 128" fill="none" stroke="${color}" stroke-width="16" stroke-linecap="round"/>
@@ -93,7 +97,7 @@ function catArt({ glasses = false, color = "#f0a35e", belly = "#fbe3c6" } = {}) 
   </svg>`;
 }
 
-function dogArt({ sweater = "#f4c430", color = "#c98a4b" } = {}) {
+export function dogArt({ sweater = "#f4c430", color = "#c98a4b" } = {}) {
   return `<svg viewBox="0 0 220 220" aria-hidden="true" style="direction:ltr">
     <ellipse cx="110" cy="208" rx="72" ry="9" fill="#000" opacity=".12"/>
     <path d="M58 150 Q60 120 110 118 Q160 120 162 150 L166 200 L54 200 Z" fill="${sweater}"/>
@@ -111,7 +115,7 @@ function dogArt({ sweater = "#f4c430", color = "#c98a4b" } = {}) {
   </svg>`;
 }
 
-function bowlArt() {
+export function bowlArt() {
   return `<svg viewBox="0 0 220 160" aria-hidden="true" style="direction:ltr">
     <ellipse cx="110" cy="146" rx="90" ry="10" fill="#000" opacity=".12"/>
     <path d="M20 78 L200 78 Q190 140 110 142 Q30 140 20 78 Z" fill="#1d6f8c"/>
@@ -125,7 +129,7 @@ function bowlArt() {
 }
 
 /* ---------- line icons for categories (stroke = currentColor) ---------- */
-const ICONS = {
+export const ICONS: Record<string, any> = {
   dry: `<path d="M16 10h32l4 44c-12 4-28 4-40 0z"/><path d="M15 10h34v6H15z"/><path d="M27 32c0-3 2-5 5-5s5 2 5 5-2 6-5 6-5-3-5-6zM24 28l2-4M40 28l-2-4"/>`,
   wet: `<ellipse cx="32" cy="18" rx="16" ry="5"/><path d="M16 18v26c0 3 7 6 16 6s16-3 16-6V18"/><path d="M16 30c4 2 28 2 32 0"/><path d="M26 15h10"/>`,
   treat: `<path d="M18 26a5 5 0 1 1 6-6l16 16a5 5 0 1 1 6 6 5 5 0 1 1-6 6 5 5 0 1 1-6-6L18 26a5 5 0 1 1-6-6"/>`,
@@ -135,12 +139,12 @@ const ICONS = {
   dog: `<path d="M20 22c-6-2-10 6-8 14 1 4 5 4 7 0M44 22c6-2 10 6 8 14-1 4-5 4-7 0"/><path d="M20 22c3-6 21-6 24 0 3 6 2 18-4 24-4 4-12 4-16 0-6-6-7-18-4-24z"/><circle cx="27" cy="31" r="1.5"/><circle cx="37" cy="31" r="1.5"/><path d="M30 39h4l-2 2z"/>`,
   cat: `<path d="M14 18l6 10M50 18l-6 10M14 18c-2 10-2 18 4 26 6 7 22 7 28 0 6-8 6-16 4-26l-8 8c-6-3-14-3-20 0z"/><circle cx="26" cy="34" r="1.5"/><circle cx="38" cy="34" r="1.5"/><path d="M30 40h4l-2 2zM22 40h-8M42 40h8"/>`,
 };
-function icon(name, size = 48) {
+export function icon(name: string, size = 48) {
   return `<svg viewBox="0 0 64 64" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 }
 
 /* ---------- UI glyphs ---------- */
-const UI = {
+export const UI: Record<string, any> = {
   search: '<path d="M10.5 4a6.5 6.5 0 1 0 4 11.6l4.4 4.4 1.4-1.4-4.4-4.4A6.5 6.5 0 0 0 10.5 4zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z" fill="currentColor"/>',
   heart: '<path d="M12 20s-7-4.4-9-9.2C1.6 7.4 3.8 4 7.2 4c2 0 3.4 1 4.8 2.7C13.4 5 14.8 4 16.8 4c3.4 0 5.6 3.4 4.2 6.8C19 15.6 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>',
   heartFill: '<path d="M12 20s-7-4.4-9-9.2C1.6 7.4 3.8 4 7.2 4c2 0 3.4 1 4.8 2.7C13.4 5 14.8 4 16.8 4c3.4 0 5.6 3.4 4.2 6.8C19 15.6 12 20 12 20z" fill="currentColor"/>',
@@ -158,4 +162,4 @@ const UI = {
   spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" fill="currentColor"/>',
   filter: '<path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
 };
-const ui = (n, s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${UI[n]}</svg>`;
+export const ui = (n: string, s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${UI[n]}</svg>`;
