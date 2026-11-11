@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# secrets / local config
+.env
+.claude/
+
+# runtime data written by the app (admin decisions, user reports)
+backend/data/decisions.json
+backend/data/reports.json
+
+# saved copy of the ChatGPT design conversation (third-party images & scripts) — kept locally only
+توضیح انتخاب بازار.html
+توضیح انتخاب بازار_files/

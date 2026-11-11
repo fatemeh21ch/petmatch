@@ -1,0 +1,67 @@
+[
+ {
+  "id": "petkade",
+  "name": "پت‌کده",
+  "website": "https://petkade.example",
+  "rating": 4.6,
+  "verified": true,
+  "shipping": {
+   "flat": 60000,
+   "free_over": 3000000
+  },
+  "accuracy": 0.97,
+  "format": "csv/fa/toman"
+ },
+ {
+  "id": "zoomall",
+  "name": "زومال",
+  "website": "https://zoomall.example",
+  "rating": 4.3,
+  "verified": true,
+  "shipping": {
+   "flat": 0,
+   "free_over": 0
+  },
+  "accuracy": 0.95,
+  "format": "json/en/rial"
+ },
+ {
+  "id": "miomall",
+  "name": "میومال",
+  "website": "https://miomall.example",
+  "rating": 4.1,
+  "verified": true,
+  "shipping": {
+   "flat": 75000,
+   "free_over": 5000000
+  },
+  "accuracy": 0.93,
+  "format": "csv/fa-arabic/formatted"
+ },
+ {
+  "id": "haposhop",
+  "name": "هاپوشاپ",
+  "website": "https://haposhop.example",
+  "rating": 4.4,
+  "verified": true,
+  "shipping": {
+   "flat": 45000,
+   "free_over": 2500000
+  },
+  "accuracy": 0.96,
+  "format": "json-nested/mixed"
+ },
+ {
+  "id": "pashmaloo",
+  "name": "دنیای پشمالو",
+  "website": "https://pashmaloo.example",
+  "rating": 3.4,
+  "verified": false,
+  "shipping": {
+   "flat": 120000,
+   "free_over": 0
+  },
+  "accuracy": 0.81,
+  "format": "csv/mixed/typos"
+ }
+]
