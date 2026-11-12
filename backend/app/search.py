@@ -51,7 +51,8 @@ class Intent:
 _BUDGET = re.compile(r"(زیر|تا|کمتر از|حداکثر|ارزان تر از|under|below|max)\s*(\d+(?:\.\d+)?)(?!\s*(?:کیلو|kg|گرم|gr|g\b|لیتر|l\b|\d))\s*(میلیون|م|هزار|تومن|تومان|m|k)?")
 _EXCLUDE = re.compile(r"(بدون|غیر از|به جز|حساسیت به|آلرژی به|حساس به|without|no)\s+(\S+(?:\s\S+)?)")
 _SORT = [("monthly", r"هزینه ماهانه|ماهانه|در ماه|هزینه تغذیه"),
-         ("cheapest", r"ارزان ?ترین|ارزون ?ترین|cheapest|کمترین قیمت"),
+         # plain "ارزان" also means cheapest-first; "ارزان تر از ۳ میلیون" is a budget, handled by _BUDGET
+         ("cheapest", r"ارزان ?ترین|ارزون ?ترین|cheapest|کمترین قیمت|ارزان(?! ?تر)|ارزون(?! ?تر)|کم ?قیمت|قیمت (?:پایین|کم)|\bcheap\b"),
          ("unit_price", r"به ?صرفه|اقتصادی|صرفه|قیمت هر کیلو"),
          ("rating", r"معتبر ?ترین|مطمئن|بهترین فروشگاه")]
 
@@ -120,16 +121,23 @@ def apply_profile(it: Intent, pet: dict | None) -> dict:
         it.from_profile.append("species")
     if it.species != pet["species"]:
         return prefs  # searching for another animal; ignore this profile
+    br = kb.BREEDS.get(pet.get("breed") or "", {})
+    if br.get("species") != pet["species"]:
+        br = {}
+    if br:
+        prefs["breed"] = pet["breed"]
     months = pet.get("age_months")
     if months is not None:
-        if months < 12:
+        if months < br.get("adult_at", 12):
             prefs["stage"] = "kitten" if pet["species"] == "cat" else "puppy"
         elif months >= 84:
             prefs["stage"] = "senior"
         else:
             prefs["stage"] = "adult"
     w = pet.get("weight_kg")
-    if pet["species"] == "dog" and w:
+    if br.get("size"):   # the breed's adult size, so a growing large-breed puppy still gets large-breed food
+        prefs["size"] = br["size"]
+    elif pet["species"] == "dog" and w:
         prefs["size"] = "mini" if w < 10 else "medium" if w < 25 else "large"
     if pet.get("sterilised") and pet["species"] == "cat":
         prefs["line"] = "sterilised"
@@ -216,6 +224,7 @@ def rank(products, it: Intent, prefs: dict, pet: dict | None = None):
         q, fit_notes = _fit(p, it, prefs)
         # wrong life stage / body size for *this* pet is a hard demotion, not a small penalty
         r["mismatch"] = any(not ok for text, ok in fit_notes if text in MISMATCH_NOTES)
+        r["breed_pick"] = any(text.startswith(BREED_FORMULA) for text, _ in fit_notes)
         rel = _relevance(p, it)
         if not b:
             r.update(value=0, score=rel * 0.3, parts={}, fit_notes=fit_notes, relevance=rel)
@@ -229,7 +238,7 @@ def rank(products, it: Intent, prefs: dict, pet: dict | None = None):
         r.update(value=round(value * 100), parts=dict(P=round(P, 2), Q=round(q, 2), R=round(R, 2), C=round(C, 2)),
                  fit_notes=fit_notes, relevance=round(rel, 2), score=0.45 * rel + 0.55 * value)
     key = {
-        "best": lambda r: (r["mismatch"], -r["score"]),
+        "best": lambda r: (r["mismatch"], not r["breed_pick"], -r["score"]),
         "cheapest": lambda r: (r["cheapest"] is None, r["cheapest"]["total"] if r["cheapest"] else 0),
         "unit_price": lambda r: (r["best"] is None, (r["best"] or {}).get("unit_price") or 0),
         "rating": lambda r: (r["best"] is None, -((r["best"] or {}).get("seller_rating") or 0), -r["score"]),
@@ -241,6 +250,7 @@ def rank(products, it: Intent, prefs: dict, pet: dict | None = None):
 
 
 MISMATCH_NOTES = {"برای رده سنی دیگری است", "برای جثه دیگری طراحی شده"}
+BREED_FORMULA = "فرمول مخصوص نژاد"   # note prefix: a breed-specific formula is listed first under "best"
 
 
 def _fit(p, it, prefs):
@@ -260,6 +270,25 @@ def _fit(p, it, prefs):
         checks.append(ok)
         if ok:
             notes.append(("فرمول مخصوص گربه عقیم‌شده", True))
+    br = kb.BREEDS.get(prefs.get("breed") or "", {})
+    if br:
+        name = br["fa"]
+        if br.get("lines") and p["type"] == "dry":
+            ok = any(l in p["line"] for l in br["lines"])
+            checks.append(ok)   # breed formula ranks first; no visible "not for this breed" note on the rest
+            if ok:
+                notes.append((f"{BREED_FORMULA} {name}", True))
+        if br.get("soft_lines") and p["type"] in ("dry", "wet") and any(l in p["line"] for l in br["soft_lines"]):
+            checks.append(True)
+            notes.append((f"مناسب نژاد {name} (کنترل وزن)", True))
+        if br.get("litter") and p["type"] == "litter":
+            ok = any(v in p["variant"] for v in br["litter"])
+            checks.append(ok)
+            if ok:
+                notes.append((f"خاک مناسب نژاد {name}", True))
+        if br.get("treat_flavors") and p["type"] == "treat" and any(f in p["flavor"] for f in br["treat_flavors"]):
+            checks.append(True)
+            notes.append((f"مالت برای گلوله موی نژاد {name}", True))
     if it.exclude_flavors and p["type"] in ("dry", "wet", "treat"):
         if p["flavor"]:
             notes.append(("بدون " + "، ".join(kb.FA_LABEL[f] for f in it.exclude_flavors) + " در پروتئین اصلی", True))

@@ -83,7 +83,8 @@ def all_users() -> list:
 
 
 def public_user(u: dict) -> dict:
-    return {k: u.get(k) for k in ("phone", "name", "role", "seller_id", "store_name", "status")} | {"role_fa": ROLE_FA[u["role"]]}
+    return {k: u.get(k) for k in ("phone", "name", "role", "seller_id", "store_name", "website", "status", "reject_reason")} \
+        | {"role_fa": ROLE_FA[u["role"]]}
 
 
 # ---------------------------------------------------------------- OTP

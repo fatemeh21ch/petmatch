@@ -195,7 +195,12 @@ def test_signup_seller_is_pending_and_admin_cannot_self_register():
     c = _fresh()
     assert c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "تست", "role": "admin"}).status_code == 422
     assert c.post("/api/v1/auth/signup", json={"phone": "09120000001", "name": "تست", "role": "buyer"}).status_code == 409
-    r = c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller", "store_name": "تست"})
+    assert c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller",
+                                               "store_name": "تست"}).status_code == 422          # store link is required
+    assert c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller",
+                                               "store_name": "تست", "website": "http://x.ir"}).status_code == 422
+    r = c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller", "store_name": "تست",
+                                            "website": "test-shop.ir"})
     code = r.json()["demo_code"]
     u = c.post("/api/v1/auth/otp/verify", json={"phone": "09121112233", "code": code}).json()["user"]
     assert u["role"] == "seller" and u["status"] == "pending"
@@ -263,29 +268,41 @@ def test_admin_blocks_store_offers_disappear_and_unblock_restores():
         _restore_stores(backup)
 
 
-def test_admin_adds_store_and_activates_waiting_seller():
+def _signup_seller(phone, store, website):
+    c = _fresh()
+    r = c.post("/api/v1/auth/signup", json={"phone": phone, "name": "رضا", "role": "seller", "store_name": store, "website": website})
+    assert r.status_code == 200, r.text
+    c.post("/api/v1/auth/otp/verify", json={"phone": phone, "code": r.json()["demo_code"]})
+    return c
+
+
+def test_store_is_added_only_by_admin_approval_of_seller_signup():
     from app import pipeline
     backup = pipeline.STORES.read_text("utf-8") if pipeline.STORES.exists() else None
+    phones = ["09121114455", "09121114466"]
     try:
-        c = _fresh()
-        code = c.post("/api/v1/auth/signup", json={"phone": "09121114455", "name": "رضا", "role": "seller",
-                                                   "store_name": "پت‌لند"}).json()["demo_code"]
-        c.post("/api/v1/auth/otp/verify", json={"phone": "09121114455", "code": code})
+        c = _signup_seller(phones[0], "پت‌لند", "petland.example")          # scheme added automatically
         assert c.get("/api/v1/seller/dashboard").json()["status"] == "pending"
+        assert c.post(f"/api/v1/admin/sellers/{phones[0]}/approve", json={}).status_code == 403   # not an admin
         a = _admin(_fresh())
-        assert any(u["phone"] == "09121114455" for u in a.get("/api/v1/admin/stores").json()["pending_sellers"])
-        bad = {"name": "پت‌لند", "website": "http://petland.example"}
-        assert a.post("/api/v1/admin/stores", json=bad).status_code == 422
-        r = a.post("/api/v1/admin/stores", json={"name": "پت‌لند", "website": "https://petland.example",
-                                                  "shipping_flat": 50000, "owner_phone": "09121114455"})
+        assert a.post("/api/v1/admin/stores", json={"name": "x", "website": "https://x.example"}).status_code in (404, 405)
+        waiting = next(u for u in a.get("/api/v1/admin/stores").json()["pending_sellers"] if u["phone"] == phones[0])
+        assert waiting["website"] == "https://petland.example" and waiting["store_name"] == "پت‌لند"
+        r = a.post(f"/api/v1/admin/sellers/{phones[0]}/approve", json={"shipping_flat": 50000})
         assert r.status_code == 201, r.text
-        assert r.json()["id"] == "petland" and r.json()["status"] == "active"
-        assert a.post("/api/v1/admin/stores", json={"name": "پت‌لند", "website": "https://x.example"}).status_code == 409
+        assert r.json()["id"] == "petland" and r.json()["website"] == "https://petland.example" and r.json()["status"] == "active"
+        assert a.post(f"/api/v1/admin/sellers/{phones[0]}/approve", json={}).status_code == 404   # no longer waiting
         d = c.get("/api/v1/seller/dashboard").json()          # same session: account is now attached
         assert d["status"] == "active" and d["seller"]["id"] == "petland" and d["listings"] == []
         assert a.get("/api/v1/home").json()["stats"]["sellers"] == 8
+
+        c2 = _signup_seller(phones[1], "فروشگاه مشکوک", "https://bad.example")
+        assert a.post(f"/api/v1/admin/sellers/{phones[1]}/reject", json={"reason": "لینک کار نمی‌کند"}).status_code == 200
+        d = c2.get("/api/v1/seller/dashboard").json()
+        assert d["status"] == "rejected" and "لینک کار نمی‌کند" in d["message"]
+        assert all(s["name"] != "فروشگاه مشکوک" for s in a.get("/api/v1/admin/stores").json()["stores"])
     finally:
-        users = [x for x in json.loads(auth.USERS_FILE.read_text("utf-8")) if x["phone"] != "09121114455"]
+        users = [x for x in json.loads(auth.USERS_FILE.read_text("utf-8")) if x["phone"] not in phones]
         auth.USERS_FILE.write_text(json.dumps(users, ensure_ascii=False), "utf-8")
         _restore_stores(backup)
 
@@ -299,3 +316,35 @@ def test_compare_products_side_by_side():
     r = client.get("/api/v1/compare", params={"ids": ",".join(ids), "pet": pet}).json()
     assert r["pet_used"] and all(x["feeding"]["monthly_cost"] > 0 for x in r["items"])
     assert len(client.get("/api/v1/compare", params={"ids": ",".join(ids * 3)}).json()["items"]) == 3
+
+
+def test_plain_cheap_word_sorts_by_cheapest_but_cheaper_than_is_a_budget():
+    from app.search import parse_rules
+    assert parse_rules("غذای خشک گربه ارزان").sort == "cheapest"
+    assert parse_rules("خاک گربه ارزون").sort == "cheapest"
+    assert parse_rules("cheap cat food").sort == "cheapest"
+    it = parse_rules("غذای گربه ارزان تر از ۳ میلیون")
+    assert it.sort == "best" and it.max_price == 3_000_000
+    r = client.get("/api/v1/search", params={"q": "غذای خشک گربه ارزان"}).json()
+    assert r["intent"]["sort"] == "cheapest"
+    totals = [x["cheapest"]["total"] for x in r["results"] if x["cheapest"]]
+    assert totals == sorted(totals)
+
+
+def test_breed_changes_recommendations():
+    pet = lambda **k: json.dumps({"species": "cat", "age_months": 30} | k)
+    top = client.get("/api/v1/search", params={"q": "غذای خشک گربه", "pet": pet(breed="persian")}).json()["results"][0]
+    assert "persian" in client.get(f"/api/v1/products/{top['id']}").json()["product"]["line"]
+    assert any("پرشین" in t for t, ok in top["fit_notes"])
+    litter = client.get("/api/v1/search", params={"q": "خاک گربه", "pet": pet(breed="persian")}).json()["results"][0]
+    assert "unscented" in client.get(f"/api/v1/products/{litter['id']}").json()["product"]["variant"]
+    # Maine Coon keeps kitten food longer; a German Shepherd puppy gets large-breed food even at 5 kg
+    mc = client.get("/api/v1/search", params={"q": "غذای خشک گربه", "pet": pet(age_months=13, breed="maine_coon")}).json()["results"][0]
+    assert client.get(f"/api/v1/products/{mc['id']}").json()["product"]["stage"] == "kitten"
+    dog = json.dumps({"species": "dog", "age_months": 8, "weight_kg": 5, "breed": "shepherd"})
+    d = client.get("/api/v1/search", params={"q": "غذای خشک سگ", "pet": dog}).json()["results"][0]
+    assert "large" in client.get(f"/api/v1/products/{d['id']}").json()["product"]["size"]
+    # unknown or other-species breed is ignored, not an error
+    assert client.get("/api/v1/search", params={"q": "غذای گربه", "pet": pet(breed="husky")}).status_code == 200
+    b = client.get("/api/v1/breeds").json()
+    assert {x["key"] for x in b["cat"]} >= {"persian", "maine_coon"} and all(x["key"] != "persian" for x in b["dog"])

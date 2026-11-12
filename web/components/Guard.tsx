@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { catArt } from "@/lib/art";
-import { useAuth } from "@/lib/client";
+import { loggedOut, useAuth } from "@/lib/client";
 import { Empty } from "./ui";
 
 /** UI convenience only: the API checks the role on every request anyway (hiding a page is not security).
@@ -36,19 +36,22 @@ export default function Guard({ role, children }: { role: "seller" | "admin"; ch
     await refresh();
   };
   useEffect(() => {
-    if (!ready || user || !demo || tried.current || !candidates.length) return;
+    if (!ready || user || !demo || tried.current || !candidates.length || loggedOut()) return;
     tried.current = true;
     enter(candidates[0].phone).catch(() => setFailed(true));
   }, [ready, user, demo]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const autoEntering = !user && (demo === null || (candidates.length > 0 && !failed));
+  const autoEntering = !user && !loggedOut() && (demo === null || (candidates.length > 0 && !failed));
   if (!ready || autoEntering) return <div className="skeleton" style={{ height: 300, marginTop: 24 }} />;
   if (!user) return (
     <Empty art={catArt({ glasses: true })}>
       <p>برای دیدن این صفحه وارد شو.</p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
         <Link className="btn btn-primary" href={`/login?next=${encodeURIComponent(path)}`}>ورود با کد یک‌بارمصرف</Link>
-        <button className="btn btn-ghost" onClick={() => { refresh(); loadDemo(); }}>تلاش دوباره (ورود نمایشی)</button>
+        {candidates.map((a) => (
+          <button key={a.phone} className="btn btn-ghost" onClick={() => enter(a.phone).catch(() => setFailed(true))}>ورود نمایشی: {a.name}</button>
+        ))}
+        {!candidates.length && <button className="btn btn-ghost" onClick={() => { refresh(); loadDemo(); }}>تلاش دوباره</button>}
       </div>
     </Empty>
   );

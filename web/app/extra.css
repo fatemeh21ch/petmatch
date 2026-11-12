@@ -172,8 +172,6 @@ button.acct:disabled { opacity: .6; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 6px; }
 tr.row-blocked td { background: var(--bad-soft); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.store-form .field { margin-top: 12px; }
-.store-form .field input[type=text] { direction: inherit; }
 .color-in { width: 64px; height: 42px; border: 1.5px solid var(--line); border-radius: 12px; padding: 3px; background: #fff; }
 @media (max-width: 760px) { .form-row { grid-template-columns: 1fr; } }
 
@@ -201,3 +199,14 @@ tr.row-blocked td { background: var(--bad-soft); }
 td.cmp-win { background: var(--good-soft); }
 td.cmp-win b, td.cmp-win { color: #145c3c; }
 @media (max-width: 760px) { .cmp-bar { bottom: 84px; } }
+.approvals { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.approval .ap-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.approval .field { margin-top: 10px; }
+.approval .ap-acts { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+.approval .ap-acts label { margin-left: auto; }
+
+/* ---------- pet profile: breed */
+.breed-pick { display: flex; align-items: center; gap: 12px; }
+.breed-pick select { flex: 1; }
+.breed-prev { width: 56px; height: 56px; border-radius: 16px; background: var(--brand-soft); display: grid; place-items: center; flex-shrink: 0; }
+.breed-prev svg { width: 52px; height: 52px; }

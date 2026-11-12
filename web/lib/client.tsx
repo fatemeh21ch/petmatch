@@ -38,7 +38,7 @@ export function useLocal<T>(key: string, fallback: T): T {
 /* ------------------------------------------------------------------ pets (Jalali birth date, age recomputed every time) */
 export type Pet = {
   id: string; name: string; species: "cat" | "dog"; birth_year: number | null; birth_month: number | null;
-  weight_kg: number | null; sterilised: boolean; allergies: string[];
+  weight_kg: number | null; sterilised: boolean; allergies: string[]; breed?: string | null;
 };
 export const MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
 export const MAX_PETS = 6;
@@ -59,10 +59,11 @@ export function usePets() {
   const active = activeId === "none" ? null : pets.find((p) => p.id === activeId) || pets[0] || null;
   return { pets, active, setActive: (id: string | null) => write("pm_active", id), setPets: (l: Pet[]) => write("pm_pets", l) };
 }
-/** Only what ranking needs leaves the device: never the name or the birth date. */
+/** Only what ranking needs leaves the device (species, age in months, weight, allergies, breed): never the name or the birth date. */
 export function petQuery(p: Pet | null) {
   if (!p) return "";
-  const payload = { species: p.species, age_months: ageMonths(p), weight_kg: p.weight_kg ?? null, sterilised: !!p.sterilised, allergies: p.allergies || [] };
+  const payload = { species: p.species, age_months: ageMonths(p), weight_kg: p.weight_kg ?? null, sterilised: !!p.sterilised,
+    allergies: p.allergies || [], breed: p.breed || null };
   return "&pet=" + encodeURIComponent(JSON.stringify(payload));
 }
 
@@ -117,10 +118,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
   const refresh = useCallback(async () => {
-    try { setUser((await api<{ user: User | null }>("/api/v1/auth/me")).user); } catch { setUser(null); }
+    let u: User | null = null;
+    try { u = (await api<{ user: User | null }>("/api/v1/auth/me")).user; } catch { u = null; }
+    if (u) write(LOGGED_OUT, null);   // any real login re-enables demo auto-entry
+    setUser(u);
     setReady(true);
   }, []);
   const logout = useCallback(async () => {
+    write(LOGGED_OUT, true);   // first, so a panel Guard still on screen doesn't sign straight back in
     try { await api("/api/v1/auth/logout", { method: "POST" }); } catch { /* ignore */ }
     setUser(null);
   }, []);
@@ -128,5 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <Ctx.Provider value={{ user, ready, refresh, logout }}>{children}</Ctx.Provider>;
 }
 export const useAuth = () => useContext(Ctx);
+/** Set by an explicit logout: panels stop auto-signing in with a demo account until the next login. */
+export const LOGGED_OUT = "pm_logged_out";
+export const loggedOut = () => read<boolean>(LOGGED_OUT, false);
 
 export const homeFor = (role?: string) => (role === "admin" ? "/admin" : role === "seller" ? "/seller" : "/");

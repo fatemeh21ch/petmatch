@@ -5,15 +5,53 @@ import { toast } from "@/lib/client";
 import { fa } from "@/lib/format";
 
 const toLatin = (s: string) => s.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٬,\s]/g, "");
-const EMPTY = { name: "", website: "https://", shipping_flat: "0", free_over: "0", color: "#13566c", owner_phone: "" };
 
-/** Admin: every store, block / unblock, add a new one (optionally activating a waiting seller account).
- * Products still only come from feeds: a new store shows its products once its feed is connected. */
+/** One waiting seller signup: open the link, set shipping, approve (creates the store) or reject. */
+function Approval({ u, onDone }: { u: any; onDone: () => void }) {
+  const [f, setF] = useState({ shipping_flat: "0", free_over: "0", color: "#13566c" });
+  const [busy, setBusy] = useState(false);
+  const approve = async () => {
+    setBusy(true);
+    try {
+      const s = await api(`/api/v1/admin/sellers/${u.phone}/approve`, { method: "POST", json: {
+        shipping_flat: +toLatin(f.shipping_flat) || 0, free_over: +toLatin(f.free_over) || 0, color: f.color } });
+      toast(`فروشگاه «${s.name}» تأیید و اضافه شد.`); onDone();
+    } catch (e: any) { toast(e.message); }
+    finally { setBusy(false); }
+  };
+  const reject = async () => {
+    const reason = prompt(`دلیل رد درخواست «${u.store_name}» (به فروشنده نشان داده می‌شود؛ اختیاری):`, "");
+    if (reason === null) return;
+    try { await api(`/api/v1/admin/sellers/${u.phone}/reject`, { method: "POST", json: { reason } }); toast("درخواست رد شد."); onDone(); }
+    catch (e: any) { toast(e.message); }
+  };
+  return (
+    <div className="card-p approval">
+      <div className="ap-head">
+        <div><h3>{u.store_name || "بی‌نام"}</h3>
+          <div className="muted" style={{ fontSize: 13 }}>{u.name} · <span className="ltr" style={{ direction: "ltr" }}>{u.phone}</span>
+            {u.created_at && ` · ${new Date(u.created_at).toLocaleDateString("fa-IR")}`}</div></div>
+        {u.website ? <a className="btn btn-ghost btn-sm" href={u.website} target="_blank" rel="noopener noreferrer nofollow" dir="ltr">{u.website.replace("https://", "")} ↗</a>
+          : <span className="pill bad">بدون لینک</span>}
+      </div>
+      <div className="form-row">
+        <div className="field"><label>هزینه ارسال (تومان)</label><input type="text" inputMode="numeric" value={f.shipping_flat} onChange={(e) => setF({ ...f, shipping_flat: e.target.value })} /></div>
+        <div className="field"><label>ارسال رایگان از (۰ = ندارد)</label><input type="text" inputMode="numeric" value={f.free_over} onChange={(e) => setF({ ...f, free_over: e.target.value })} /></div>
+      </div>
+      <div className="ap-acts">
+        <label className="muted" style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>رنگ <input type="color" className="color-in" value={f.color} onChange={(e) => setF({ ...f, color: e.target.value })} /></label>
+        <button className="btn btn-good btn-sm" disabled={busy || !u.website} onClick={approve}>{busy ? "…" : "تأیید و ساخت فروشگاه"}</button>
+        <button className="btn btn-bad btn-sm" disabled={busy} onClick={reject}>رد درخواست</button>
+      </div>
+    </div>
+  );
+}
+
+/** Admin: every store with block / unblock, and seller signups waiting for approval.
+ * A store is only added by approving a signup; products still only come from feeds. */
 export default function AdminStores() {
   const [d, setD] = useState<any>(null);
-  const [f, setF] = useState(EMPTY);
   const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
   const load = useCallback(() => api("/api/v1/admin/stores").then(setD).catch((e) => setErr(e.message)), []);
   useEffect(() => { load(); }, [load]);
 
@@ -27,22 +65,6 @@ export default function AdminStores() {
     try { await api(`/api/v1/admin/stores/${s.id}/unblock`, { method: "POST" }); toast(`«${s.name}» دوباره فعال شد.`); load(); }
     catch (e: any) { toast(e.message); }
   };
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    setErr("");
-    if (f.name.trim().length < 2) { setErr("نام فروشگاه را وارد کنید."); return; }
-    if (!/^https:\/\/[^/]+\.[^/]+/.test(f.website.trim())) { setErr("آدرس سایت باید کامل و با https:// باشد، مثلاً https://petland.ir"); return; }
-    setBusy(true);
-    try {
-      const s = await api("/api/v1/admin/stores", { method: "POST", json: {
-        name: f.name.trim(), website: f.website.trim(), shipping_flat: +toLatin(f.shipping_flat) || 0,
-        free_over: +toLatin(f.free_over) || 0, color: f.color, owner_phone: f.owner_phone || null } });
-      toast(`فروشگاه «${s.name}» اضافه شد.`); setF(EMPTY); load();
-    } catch (e: any) { setErr(e.message); }
-    finally { setBusy(false); }
-  }
-  const set = (k: keyof typeof EMPTY) => (e: any) => setF({ ...f, [k]: e.target.value });
-
   if (!d) return err ? <div className="notice">{err}</div> : <div className="skeleton" style={{ height: 400 }} />;
   const active = d.stores.filter((s: any) => s.status === "active").length;
   return (
@@ -51,7 +73,7 @@ export default function AdminStores() {
         <div className="kpi"><div className="v">{fa(d.stores.length)}</div><div className="k">فروشگاه</div></div>
         <div className="kpi"><div className="v">{fa(active)}</div><div className="k">فعال</div></div>
         <div className="kpi"><div className="v">{fa(d.stores.length - active)}</div><div className="k">مسدود</div></div>
-        <div className="kpi"><div className="v">{fa(d.pending_sellers.length)}</div><div className="k">فروشنده در انتظار تأیید</div></div>
+        <div className="kpi"><div className="v">{fa(d.pending_sellers.length)}</div><div className="k">درخواست در انتظار تأیید</div></div>
       </div>
 
       <section className="sec">
@@ -79,42 +101,17 @@ export default function AdminStores() {
         </table></div>
       </section>
 
-      <div className="grid2 sec">
-        <form className="card-p store-form" onSubmit={add} noValidate>
-          <h3>افزودن فروشگاه</h3>
-          <div className="sub">فروشگاه ثبت می‌شود و محصولاتش بعد از اتصال فید (CSV، JSON یا API) وارد پایپ‌لاین تطبیق می‌شوند.</div>
-          <div className="form-row">
-            <div className="field"><label htmlFor="sn">نام فروشگاه</label><input id="sn" type="text" value={f.name} onChange={set("name")} maxLength={40} placeholder="مثلاً پت‌لند" /></div>
-            <div className="field"><label htmlFor="sw">آدرس سایت</label><input id="sw" type="text" dir="ltr" value={f.website} onChange={set("website")} maxLength={80} /></div>
-          </div>
-          <div className="form-row">
-            <div className="field"><label htmlFor="ss">هزینه ارسال (تومان)</label><input id="ss" type="text" inputMode="numeric" value={f.shipping_flat} onChange={set("shipping_flat")} /></div>
-            <div className="field"><label htmlFor="sf">ارسال رایگان از (تومان، ۰ = ندارد)</label><input id="sf" type="text" inputMode="numeric" value={f.free_over} onChange={set("free_over")} /></div>
-          </div>
-          <div className="form-row">
-            <div className="field"><label htmlFor="so">حساب فروشنده <small className="muted">(اختیاری)</small></label>
-              <select id="so" value={f.owner_phone} onChange={(e) => {
-                const u = d.pending_sellers.find((x: any) => x.phone === e.target.value);
-                setF({ ...f, owner_phone: e.target.value, name: f.name || u?.store_name || "" });
-              }}>
-                <option value="">بدون حساب</option>
-                {d.pending_sellers.map((u: any) => <option key={u.phone} value={u.phone}>{u.store_name || "بی‌نام"} · {u.name}</option>)}
-              </select>
-              <small className="muted">{d.pending_sellers.length ? "حساب انتخاب‌شده تأیید و به این فروشگاه وصل می‌شود." : "فروشنده‌ای در انتظار تأیید نیست."}</small></div>
-            <div className="field"><label htmlFor="sc">رنگ فروشگاه</label><input id="sc" type="color" value={f.color} onChange={set("color")} className="color-in" /></div>
-          </div>
-          {err && <div className="err-msg">{err}</div>}
-          <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} disabled={busy}>{busy ? "در حال ثبت…" : "افزودن فروشگاه"}</button>
-        </form>
-        <div className="card-p">
-          <h3>فروشندگان در انتظار تأیید</h3>
-          <div className="sub">کسانی که از فرم ثبت‌نام، فروشنده شده‌اند</div>
-          {d.pending_sellers.length ? <div className="qlist">{d.pending_sellers.map((u: any) => (
-            <div key={u.phone} className="qrow"><span><b>{u.store_name || "بی‌نام"}</b> · {u.name} <span className="ltr" style={{ direction: "ltr" }}>{u.phone}</span></span>
-              <button className="linkish" onClick={() => setF({ ...f, owner_phone: u.phone, name: u.store_name || f.name })}>ساخت فروشگاه</button></div>))}</div>
-            : <p className="hint">فعلاً کسی منتظر نیست.</p>}
-        </div>
-      </div>
+      <section className="sec">
+        <div className="sec-h"><div><h2>درخواست‌های <b>ثبت فروشگاه</b></h2>
+          <div className="sub">فروشگاه فقط با تأیید مدیر اضافه می‌شود. نام و لینک فروشگاه را خود فروشنده در ثبت‌نام وارد کرده؛ قبل از تأیید لینک را باز کنید.</div></div></div>
+        {d.pending_sellers.length ? <div className="approvals">{d.pending_sellers.map((u: any) => <Approval key={u.phone} u={u} onDone={load} />)}</div>
+          : <div className="panel muted">درخواستی در انتظار نیست. فروشنده‌ها از «ثبت‌نام ← فروشنده» با نام و لینک فروشگاه درخواست می‌دهند.</div>}
+        {d.rejected_sellers.length > 0 && <>
+          <h3 style={{ marginTop: 16, fontSize: 15 }}>ردشده‌ها</h3>
+          <div className="qlist" style={{ marginTop: 6 }}>{d.rejected_sellers.map((u: any) => (
+            <div key={u.phone} className="qrow"><span><b>{u.store_name}</b> · {u.name}{u.reject_reason ? ` · دلیل: ${u.reject_reason}` : ""}</span>
+              <span className="ltr" style={{ direction: "ltr" }}>{(u.website || "").replace("https://", "")}</span></div>))}</div></>}
+      </section>
     </>
   );
 }

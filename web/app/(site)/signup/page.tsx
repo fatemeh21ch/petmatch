@@ -22,6 +22,7 @@ function SignupView() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.terms) { setErr("پذیرفتن قوانین لازم است"); return; }
+    if (role === "seller" && !form.website.trim()) { setErr("لینک فروشگاه را وارد کنید (مثلاً petshop.ir)"); return; }
     setBusy(true); setErr("");
     try { setSent(await api("/api/v1/auth/signup", { method: "POST", json: body() })); }
     catch (e: any) { setErr(e.message); }
@@ -59,10 +60,10 @@ function SignupView() {
               {role === "seller" && (
                 <div className="row2">
                   <div className="field"><label htmlFor="st">نام فروشگاه</label><input id="st" type="text" required maxLength={40} value={form.store_name} onChange={(e) => setForm({ ...form, store_name: e.target.value })} /></div>
-                  <div className="field"><label htmlFor="ws">آدرس سایت (اختیاری)</label><input id="ws" type="text" dir="ltr" placeholder="https://" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="ws">لینک فروشگاه</label><input id="ws" type="text" dir="ltr" required placeholder="petshop.ir" maxLength={80} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
                 </div>
               )}
-              {role === "seller" && <div className="hint">حساب فروشنده پس از بررسی هویت کسب‌وکار فعال می‌شود؛ تا آن موقع پنل در حالت «در انتظار تأیید» است.</div>}
+              {role === "seller" && <div className="hint">لینک سایت فروشگاهتان را بنویسید (https). مدیر پت‌مچ آن را بررسی می‌کند و فروشگاه فقط بعد از تأیید مدیر اضافه می‌شود؛ تا آن موقع پنل در حالت «در انتظار تأیید» است.</div>}
               <label className="check"><input type="checkbox" checked={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.checked })} />
                 <span>قوانین پت‌مچ و سیاست حریم خصوصی را می‌پذیرم. فقط شماره موبایل و نام ذخیره می‌شود.</span></label>
               {err && <div className="err-msg">{err} {err.includes("وارد شوید") && <Link href="/login">ورود</Link>}</div>}

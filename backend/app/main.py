@@ -33,13 +33,17 @@ class Pet(BaseModel):
     weight_kg: float | None = Field(None, gt=0, le=120)
     allergies: list[str] = []
     sterilised: bool = False
+    breed: str | None = Field(None, max_length=20)
 
 
 def pet_from_query(pet: str | None) -> dict | None:
     if not pet:
         return None
     try:
-        return Pet(**json.loads(pet)).model_dump()
+        d = Pet(**json.loads(pet)).model_dump()
+        if d["breed"] not in kb.BREEDS or kb.BREEDS[d["breed"]]["species"] != d["species"]:
+            d["breed"] = None   # unknown or other-species breed: ignore rather than fail
+        return d
     except Exception:
         raise HTTPException(400, "invalid pet profile")
 
@@ -209,6 +213,13 @@ def home():
                 ai_available=ai.available())
 
 
+@app.get("/api/v1/breeds")
+def breeds():
+    """Breed list for the pet profile, with the reason its picks differ (shown on the pet page)."""
+    return {sp: [dict(key=k, fa=b["fa"], why=b.get("why"), adult_at=b.get("adult_at", 12), size=b.get("size"))
+                 for k, b in kb.BREEDS.items() if b["species"] == sp] for sp in ("cat", "dog")}
+
+
 @app.get("/api/v1/nav")
 def nav():
     """Menus are built from the catalog, so both animals follow the same structure and a menu
@@ -355,11 +366,28 @@ def signup(s: Signup):
     phone = auth.normalize_phone(s.phone)
     if auth.get_user(phone):
         raise HTTPException(409, "این شماره قبلاً ثبت‌نام کرده؛ وارد شوید")
-    if s.role == "seller" and not (s.store_name or "").strip():
-        raise HTTPException(422, "نام فروشگاه را وارد کنید")
-    if s.website and not s.website.startswith("https://"):
-        raise HTTPException(422, "آدرس سایت باید با https:// شروع شود")
-    return auth.request_otp(phone, "signup", s.model_dump())
+    data = s.model_dump()
+    if s.role == "seller":
+        if not (s.store_name or "").strip():
+            raise HTTPException(422, "نام فروشگاه را وارد کنید")
+        data["website"] = store_link(s.website)
+    else:
+        data["website"] = None
+    return auth.request_otp(phone, "signup", data)
+
+
+def store_link(raw: str | None) -> str:
+    """The shop's own site: required for sellers, https only, scheme added when missing."""
+    url = (raw or "").strip().rstrip("/")
+    if not url:
+        raise HTTPException(422, "لینک فروشگاه را وارد کنید (مثلاً https://petshop.ir)")
+    if url.startswith("http://"):
+        raise HTTPException(422, "لینک فروشگاه باید https باشد")
+    if not url.startswith("https://"):
+        url = "https://" + url
+    if not re.fullmatch(r"https://[\w\-.]+\.[a-z]{2,}(/[^\s]*)?", url, re.I):
+        raise HTTPException(422, "لینک فروشگاه معتبر نیست (مثلاً https://petshop.ir)")
+    return url
 
 
 @app.post("/api/v1/auth/otp/verify")
@@ -437,6 +465,10 @@ def store_page(seller_id: str, listing_id: str):
 def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
     cat = catalog()
     sid = user.get("seller_id")
+    if user.get("status") == "rejected":
+        return {"status": "rejected", "user": auth.public_user(user),
+                "message": "درخواست ثبت فروشگاه شما توسط مدیر پت‌مچ رد شد."
+                           + (f" دلیل: {user['reject_reason']}" if user.get("reject_reason") else "")}
     if not sid:
         return {"status": "pending", "user": auth.public_user(user),
                 "message": "حساب فروشنده شما ثبت شد و پس از بررسی هویت کسب‌وکار، فید محصولات به فروشگاهتان وصل می‌شود."}
@@ -534,19 +566,17 @@ def admin_analytics():
     }
 
 
-# ------------------------------------------------------------------ admin: stores (add / block / unblock)
-# Products still come only from feeds: adding a store registers it (and can activate a waiting seller
-# account); its products appear once its feed is connected. Blocking removes every offer of the store.
-class NewStore(BaseModel):
-    name: str = Field(min_length=2, max_length=40)
-    website: str = Field(max_length=80)
+# ------------------------------------------------------------------ admin: stores (approve / reject / block / unblock)
+# A store only comes into PetMatch when an admin approves a seller's signup (store name + link from the
+# signup form). Products still come only from feeds, so a new store shows products once its feed is
+# connected. Blocking removes every offer of the store.
+class Approve(BaseModel):
     shipping_flat: int = Field(0, ge=0, le=5_000_000)
     free_over: int = Field(0, ge=0, le=100_000_000)
     color: str = Field("#13566c", pattern=r"^#[0-9a-fA-F]{6}$")
-    owner_phone: str | None = Field(None, max_length=20)   # a seller account waiting for approval
 
 
-class BlockStore(BaseModel):
+class Reason(BaseModel):
     reason: str = Field("", max_length=120)
 
 
@@ -557,6 +587,13 @@ def _store_id(website: str, taken) -> str:
     while sid in taken:
         sid, n = f"{base}{n}", n + 1
     return sid
+
+
+def _waiting_seller(phone: str) -> dict:
+    u = auth.get_user(auth.normalize_phone(phone))
+    if not u or u["role"] != "seller" or u.get("status") != "pending":
+        raise HTTPException(404, "درخواست فروشنده‌ای با این شماره در انتظار نیست")
+    return u
 
 
 @app.get("/api/v1/admin/stores", dependencies=[Depends(require_admin)])
@@ -571,34 +608,43 @@ def admin_stores():
                    accounts=[auth.public_user(u) for u in users if u.get("seller_id") == sid])
               for sid, s in cat["sellers"].items()]
     stores.sort(key=lambda x: (x["status"] != "active", x["source"] != "feed", x["name"]))
-    return {"stores": stores, "pending_sellers": [auth.public_user(u) for u in users if u.get("status") == "pending"]}
+    by_status = lambda st: [auth.public_user(u) | {"created_at": u.get("created_at")}
+                            for u in users if u["role"] == "seller" and u.get("status") == st]
+    return {"stores": stores, "pending_sellers": by_status("pending"), "rejected_sellers": by_status("rejected")}
 
 
-@app.post("/api/v1/admin/stores", status_code=201, dependencies=[Depends(require_admin)])
-def admin_add_store(n: NewStore):
-    if not n.website.startswith("https://"):
-        raise HTTPException(422, "آدرس سایت باید با https:// شروع شود")
-    owner = None
-    if n.owner_phone:
-        owner = auth.get_user(auth.normalize_phone(n.owner_phone))
-        if not owner or owner["role"] != "seller" or owner.get("seller_id"):
-            raise HTTPException(422, "این شماره یک حساب فروشنده در انتظار تأیید نیست")
+@app.post("/api/v1/admin/sellers/{phone}/approve", status_code=201, dependencies=[Depends(require_admin)])
+def admin_approve_seller(phone: str, a: Approve):
+    """The only way a store is added: from the seller's own signup (store name + link), after review."""
+    owner = _waiting_seller(phone)
+    name = (owner.get("store_name") or "").strip()
+    website = owner.get("website") or ""
+    if not name or not website.startswith("https://"):
+        raise HTTPException(422, "نام یا لینک فروشگاه در ثبت‌نام کامل نیست؛ درخواست را رد کنید")
     with _lock:
         cat = catalog()
-        if any(s["name"] == n.name.strip() for s in cat["sellers"].values()):
-            raise HTTPException(409, "فروشگاهی با این نام وجود دارد")
+        if any(s["name"] == name for s in cat["sellers"].values()):
+            raise HTTPException(409, f"فروشگاهی با نام «{name}» وجود دارد")
+        if any(s["website"].rstrip("/") == website.rstrip("/") for s in cat["sellers"].values()):
+            raise HTTPException(409, "فروشگاهی با همین لینک وجود دارد")
         data = pipeline.load_stores()
-        sid = _store_id(n.website, cat["sellers"])
-        store = dict(id=sid, name=n.name.strip(), website=n.website.rstrip("/"), rating=4.0, verified=False,
-                     shipping=dict(flat=n.shipping_flat, free_over=n.free_over), accuracy=0.9,
-                     format="در انتظار اتصال فید", color=n.color,
+        sid = _store_id(website, cat["sellers"])
+        store = dict(id=sid, name=name, website=website, rating=4.0, verified=False,
+                     shipping=dict(flat=a.shipping_flat, free_over=a.free_over), accuracy=0.9,
+                     format="در انتظار اتصال فید", color=a.color, owner=owner["phone"],
                      added_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
         data["added"].append(store)
         pipeline.save_stores(data)
-    if owner:   # approve the waiting seller account and attach it to the new store
-        auth._save_user(owner | {"seller_id": sid, "status": "active", "store_name": store["name"]})
+    auth._save_user(owner | {"seller_id": sid, "status": "active", "reject_reason": None})
     rebuild()
     return catalog()["sellers"][sid]
+
+
+@app.post("/api/v1/admin/sellers/{phone}/reject", dependencies=[Depends(require_admin)])
+def admin_reject_seller(phone: str, r: Reason):
+    owner = _waiting_seller(phone)
+    auth._save_user(owner | {"status": "rejected", "reject_reason": r.reason.strip() or None})
+    return {"ok": True}
 
 
 def _set_block(sid: str, block: dict | None):
@@ -616,7 +662,7 @@ def _set_block(sid: str, block: dict | None):
 
 
 @app.post("/api/v1/admin/stores/{sid}/block", dependencies=[Depends(require_admin)])
-def admin_block_store(sid: str, b: BlockStore):
+def admin_block_store(sid: str, b: Reason):
     return _set_block(sid, {"reason": b.reason.strip(), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
 
 

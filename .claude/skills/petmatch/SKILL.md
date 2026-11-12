@@ -38,13 +38,18 @@ There is no add/edit/delete in the seller panel (a product decision). A store's 
 change only through its feed (`backend/data/raw/*` + `pipeline._ingest()`). The seller dashboard is read-only.
 
 ## Stores (admin)
-`components/AdminStores.tsx` ↔ `GET/POST /api/v1/admin/stores`, `POST /admin/stores/{id}/block|unblock`. State lives in
+`components/AdminStores.tsx` ↔ `GET /api/v1/admin/stores`, `POST /admin/sellers/{phone}/approve|reject` (stores are only added
+by approving a seller signup), `POST /admin/stores/{id}/block|unblock`. State lives in
 `backend/data/stores.json` via `pipeline.load_stores()/save_stores()`; `pipeline.all_sellers()` tags each store with `status`
 and `source` (feed/admin). Tests must restore `stores.json` (see `_restore_stores` in the tests).
 
 ## Product comparison (buyer)
 `useCompare()` in `lib/client.tsx` (localStorage `pm_compare`, max 4) → `CompareButton` on cards and the product page →
 `CompareBar` in the site layout → `app/(site)/compare/page.tsx` → `GET /api/v1/compare` (reuses `rank()` and `card()`).
+
+## Breeds
+Add or change a breed in `kb.BREEDS` (ranking rules) and its look in `CAT_BREED_ART` / `DOG_BREED_ART` (`web/lib/art.ts`).
+The pet form reads the list from `GET /api/v1/breeds`; `test_breed_changes_recommendations` covers the rules.
 
 ## Docs to touch when behaviour changes
 `README.md` (features table, test count),

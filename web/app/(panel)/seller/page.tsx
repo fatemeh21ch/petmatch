@@ -16,6 +16,13 @@ function Dashboard() {
   useEffect(() => { api("/api/v1/seller/dashboard").then(setD).catch((e) => setErr(e.message)); }, []);
   if (err) return <div className="notice">{err}</div>;
   if (!d) return <div className="skeleton" style={{ height: 420, marginTop: 24 }} />;
+  if (d.status === "rejected") return (
+    <Empty art={dogArt({ sweater: "#84979e" })}>
+      <h2 style={{ fontSize: 20 }}>درخواست {d.user.store_name || "فروشگاه شما"} رد شد</h2>
+      <p>{d.message}</p>
+      <p className="hint">برای درخواست دوباره با پشتیبانی پت‌مچ تماس بگیرید.</p>
+    </Empty>
+  );
   if (d.status === "blocked") return (
     <Empty art={dogArt({ sweater: "#c0392b" })}>
       <h2 style={{ fontSize: 20 }}>{d.seller.name} مسدود است</h2>
@@ -27,7 +34,8 @@ function Dashboard() {
     <Empty art={dogArt({ sweater: "#6b5bd1" })}>
       <h2 style={{ fontSize: 20 }}>{d.user.store_name || "فروشگاه شما"} در انتظار تأیید است</h2>
       <p>{d.message}</p>
-      <p className="hint">قدم بعدی: فید محصولات (CSV، XML یا API) را به پشتیبانی بدهید تا آگهی‌ها با همان پایپ‌لاین یکسان‌سازی و تطبیق وارد شوند.</p>
+      {d.user.website && <p className="hint">لینک ثبت‌شده: <span dir="ltr">{d.user.website}</span></p>}
+      <p className="hint">فروشگاه فقط بعد از تأیید مدیر پت‌مچ اضافه می‌شود. بعد از آن فید محصولات (CSV، XML یا API) را به پشتیبانی بدهید تا آگهی‌ها با همان پایپ‌لاین یکسان‌سازی و تطبیق وارد شوند.</p>
     </Empty>
   );
 

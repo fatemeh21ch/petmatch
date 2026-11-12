@@ -132,3 +132,32 @@ EN_LABEL = {
     "gravy": "Gravy", "pouch": "Pouch", "dentastix": "Dentastix", "paste": "Paste", "beef": "Beef",
     "persian": "Persian", "carismo": "Carismo",
 }
+
+# Breed → soft ranking rules. Not veterinary advice; general, widely published feeding guidance.
+#   adult_at:  months the young-animal formula is kept (large / slow-maturing breeds grow longer)
+#   size:      dog body size, used even before the dog is grown (a 6 kg German Shepherd puppy is still "large")
+#   lines:     a breed-specific formula that should rank first when it exists (hard preference for dry food)
+#   soft_lines: helpful formulas (bonus only)
+#   litter / treat_flavors: preferred litter variants / treat flavours (bonus only)
+BREEDS = {
+    "domestic":   {"species": "cat", "fa": "خانگی / مخلوط"},
+    "persian":    {"species": "cat", "fa": "پرشین", "lines": ["persian"], "litter": ["unscented"], "treat_flavors": ["malt"],
+                   "why": "صورت پهن و موی بلند: کراکت مخصوص پرشین، خاک بدون عطر و کم‌گرد، و خمیر مالت برای گلوله مو"},
+    "british":    {"species": "cat", "fa": "بریتیش شورت‌هیر", "soft_lines": ["sterilised", "indoor", "fit"],
+                   "why": "مستعد اضافه‌وزن: فرمول‌های عقیم‌شده، ایندور یا فیت"},
+    "scottish":   {"species": "cat", "fa": "اسکاتیش فولد", "soft_lines": ["indoor", "sterilised", "fit"],
+                   "why": "کم‌تحرک و مستعد اضافه‌وزن: فرمول کم‌کالری و کنترل وزن"},
+    "siamese":    {"species": "cat", "fa": "سیامی", "soft_lines": ["fit"],
+                   "why": "پرانرژی و لاغراندام: غذای بالغ با پروتئین کافی، بدون نیاز به فرمول رژیمی"},
+    "maine_coon": {"species": "cat", "fa": "مین کون", "adult_at": 15, "litter": ["unscented", "bentonite"], "treat_flavors": ["malt"],
+                   "why": "جثه بزرگ و رشد طولانی: غذای بچه‌گربه تا حدود ۱۵ ماهگی، خاک گلوله‌شونده و مالت برای موی بلند"},
+    "mixed":      {"species": "dog", "fa": "مخلوط / نامشخص"},
+    "pomeranian": {"species": "dog", "fa": "پامرانین", "size": "mini", "why": "نژاد کوچک: کراکت ریز و پرانرژی مخصوص نژاد کوچک"},
+    "shih_tzu":   {"species": "dog", "fa": "شیتزو", "size": "mini", "why": "نژاد کوچک با فک کوچک: کراکت ریز"},
+    "yorkie":     {"species": "dog", "fa": "یورکشایر تریر", "size": "mini", "why": "نژاد خیلی کوچک: کراکت ریز و وعده‌های کم‌حجم"},
+    "husky":      {"species": "dog", "fa": "هاسکی", "size": "medium", "adult_at": 15, "why": "پرتحرک: غذای نژاد متوسط با انرژی کافی"},
+    "golden":     {"species": "dog", "fa": "گلدن رتریور", "size": "large", "adult_at": 18,
+                   "why": "نژاد بزرگ: غذای توله تا حدود ۱۸ ماهگی برای رشد آرام مفاصل، بعد فرمول نژاد بزرگ"},
+    "shepherd":   {"species": "dog", "fa": "ژرمن شپرد", "size": "large", "adult_at": 18,
+                   "why": "نژاد بزرگ: غذای توله تا حدود ۱۸ ماهگی، بعد فرمول نژاد بزرگ"},
+}

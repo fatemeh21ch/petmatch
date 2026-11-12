@@ -74,45 +74,100 @@ export function pkgSVG(p: any, size = 200) {
 }
 
 /* ---------- banner pets ---------- */
-export function catArt({ glasses = false, color = "#f0a35e", belly = "#fbe3c6" } = {}) {
+type CatOpts = { glasses?: boolean; color?: string; belly?: string; stripe?: string;
+  fluffy?: boolean; points?: string; folded?: boolean; tufts?: boolean };
+/** Cat illustration. Breed looks: fluffy (long-hair ruff), points (Siamese dark face/ears/tail),
+ * folded (Scottish Fold ears), tufts (Maine Coon ear tufts). */
+export function catArt({ glasses = false, color = "#f0a35e", belly = "#fbe3c6", stripe = "#c97a3a",
+  fluffy = false, points = "", folded = false, tufts = false }: CatOpts = {}) {
+  const pt = points || color;
+  const ears = folded
+    ? ""
+    : `<path d="M60 80 L66 30 L98 62 Z" fill="${points ? pt : color}"/><path d="M160 80 L154 30 L122 62 Z" fill="${points ? pt : color}"/>
+       <path d="M70 70 L72 44 L90 62 Z" fill="#f7c3b0"/><path d="M150 70 L148 44 L130 62 Z" fill="#f7c3b0"/>
+       ${tufts ? `<path d="M66 32 l-5 -14 M66 32 l1 -15 M66 32 l6 -12 M154 32 l5 -14 M154 32 l-1 -15 M154 32 l-6 -12" stroke="${stripe}" stroke-width="3" stroke-linecap="round"/>` : ""}`;
+  const foldedEars = folded
+    ? `<path d="M66 70 Q64 46 92 50 Q84 58 82 70 Z" fill="${color}" stroke="${stripe}" stroke-width="2"/>
+       <path d="M154 70 Q156 46 128 50 Q136 58 138 70 Z" fill="${color}" stroke="${stripe}" stroke-width="2"/>`
+    : "";
   return `<svg viewBox="0 0 220 220" aria-hidden="true" style="direction:ltr">
     <ellipse cx="110" cy="206" rx="70" ry="9" fill="#000" opacity=".12"/>
-    <path d="M150 190 C200 190 205 140 178 128" fill="none" stroke="${color}" stroke-width="16" stroke-linecap="round"/>
-    <ellipse cx="110" cy="160" rx="52" ry="46" fill="${color}"/>
+    <path d="M150 190 C200 190 205 140 178 128" fill="none" stroke="${pt}" stroke-width="${fluffy ? 26 : 16}" stroke-linecap="round"/>
+    <ellipse cx="110" cy="160" rx="${fluffy ? 58 : 52}" ry="46" fill="${color}"/>
     <ellipse cx="110" cy="170" rx="28" ry="30" fill="${belly}"/>
-    <path d="M60 80 L66 30 L98 62 Z" fill="${color}"/><path d="M160 80 L154 30 L122 62 Z" fill="${color}"/>
-    <path d="M70 70 L72 44 L90 62 Z" fill="#f7c3b0"/><path d="M150 70 L148 44 L130 62 Z" fill="${color === "#fff" ? "#f7c3b0" : "#f7c3b0"}"/>
-    <ellipse cx="110" cy="92" rx="54" ry="46" fill="${color}"/>
-    <path d="M86 58 q4 10 0 18 M110 54 q4 12 0 22 M134 58 q4 10 0 18" stroke="#c97a3a" stroke-width="5" stroke-linecap="round" fill="none" opacity=".5"/>
-    <ellipse cx="110" cy="112" rx="26" ry="18" fill="${belly}"/>
+    ${fluffy ? `<path d="M50 104 Q40 140 70 150 Q90 160 110 152 Q130 160 150 150 Q180 140 170 104 Z" fill="${belly}"/>
+      <path d="M58 120 l-10 6 M64 134 l-10 8 M162 120 l10 6 M156 134 l10 8" stroke="${belly}" stroke-width="6" stroke-linecap="round"/>` : ""}
+    ${ears}
+    <ellipse cx="110" cy="92" rx="${fluffy ? 60 : 54}" ry="${fluffy ? 50 : 46}" fill="${color}"/>
+    ${foldedEars}
+    ${points ? `<ellipse cx="110" cy="104" rx="34" ry="28" fill="${pt}" opacity=".85"/>` : `<path d="M86 58 q4 10 0 18 M110 54 q4 12 0 22 M134 58 q4 10 0 18" stroke="${stripe}" stroke-width="5" stroke-linecap="round" fill="none" opacity=".5"/>`}
+    <ellipse cx="110" cy="112" rx="26" ry="18" fill="${points ? pt : belly}"/>
     ${glasses
       ? `<g><rect x="70" y="80" width="32" height="20" rx="9" fill="#1b2a30"/><rect x="118" y="80" width="32" height="20" rx="9" fill="#1b2a30"/>
          <path d="M102 88 h16" stroke="#1b2a30" stroke-width="4"/><path d="M76 84 l8 -2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".6"/></g>`
-      : `<ellipse cx="88" cy="90" rx="7" ry="9" fill="#24343a"/><ellipse cx="132" cy="90" rx="7" ry="9" fill="#24343a"/>
+      : `<ellipse cx="88" cy="90" rx="7" ry="9" fill="${points ? "#4f8fd6" : "#24343a"}"/><ellipse cx="132" cy="90" rx="7" ry="9" fill="${points ? "#4f8fd6" : "#24343a"}"/>
          <circle cx="90" cy="87" r="2.5" fill="#fff"/><circle cx="134" cy="87" r="2.5" fill="#fff"/>`}
     <path d="M104 108 h12 l-6 7 z" fill="#e57d7d"/>
     <path d="M110 115 q-6 8 -13 4 M110 115 q6 8 13 4" stroke="#24343a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <path d="M78 112 h-26 M78 118 l-24 6 M142 112 h26 M142 118 l24 6" stroke="#24343a" stroke-width="2" stroke-linecap="round" opacity=".6"/>
-    <path d="M84 196 v-14 M136 196 v-14" stroke="${belly}" stroke-width="16" stroke-linecap="round"/>
+    <path d="M78 112 h-26 M78 118 l-24 6 M142 112 h26 M142 118 l24 6" stroke="${points ? "#f4ede2" : "#24343a"}" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+    <path d="M84 196 v-14 M136 196 v-14" stroke="${points ? pt : belly}" stroke-width="16" stroke-linecap="round"/>
   </svg>`;
 }
 
-export function dogArt({ sweater = "#f4c430", color = "#c98a4b" } = {}) {
+type DogOpts = { sweater?: string; color?: string; ear?: string; ears?: "floppy" | "pointy"; mask?: boolean; fluffy?: boolean };
+/** Dog illustration. Breed looks: pointy ears (Husky, Shepherd, Pomeranian, Yorkie), floppy ears
+ * (Golden, Shih Tzu), white face mask (Husky), fluffy ruff (Pomeranian). */
+export function dogArt({ sweater = "#f4c430", color = "#c98a4b", ear = "#7a4f2a", ears = "floppy", mask = false, fluffy = false }: DogOpts = {}) {
+  const earsSvg = ears === "pointy"
+    ? `<path d="M66 64 L70 14 L104 46 Z" fill="${ear}"/><path d="M154 64 L150 14 L116 46 Z" fill="${ear}"/>
+       <path d="M74 54 L76 28 L94 46 Z" fill="#f3c1b5"/><path d="M146 54 L144 28 L126 46 Z" fill="#f3c1b5"/>`
+    : "";
+  const floppy = ears === "floppy"
+    ? `<path d="M64 60 C34 60 30 120 50 132 C64 140 72 110 72 84 Z" fill="${ear}"/>
+       <path d="M156 60 C186 60 190 120 170 132 C156 140 148 110 148 84 Z" fill="${ear}"/>`
+    : "";
   return `<svg viewBox="0 0 220 220" aria-hidden="true" style="direction:ltr">
     <ellipse cx="110" cy="208" rx="72" ry="9" fill="#000" opacity=".12"/>
     <path d="M58 150 Q60 120 110 118 Q160 120 162 150 L166 200 L54 200 Z" fill="${sweater}"/>
     <path d="M62 150 Q110 168 158 150" stroke="#fff" stroke-opacity=".5" stroke-width="5" fill="none"/>
     <path d="M70 176 h80 M68 190 h84" stroke="#000" stroke-opacity=".08" stroke-width="5"/>
-    <ellipse cx="110" cy="84" rx="50" ry="48" fill="${color}"/>
-    <path d="M64 60 C34 60 30 120 50 132 C64 140 72 110 72 84 Z" fill="#7a4f2a"/>
-    <path d="M156 60 C186 60 190 120 170 132 C156 140 148 110 148 84 Z" fill="#7a4f2a"/>
-    <ellipse cx="110" cy="108" rx="30" ry="22" fill="#f1d3b0"/>
-    <ellipse cx="90" cy="80" rx="7" ry="8" fill="#24343a"/><ellipse cx="130" cy="80" rx="7" ry="8" fill="#24343a"/>
+    ${fluffy ? `<path d="M52 118 Q50 146 80 150 Q110 160 140 150 Q170 146 168 118 Q110 136 52 118 Z" fill="${color}"/>` : ""}
+    ${earsSvg}
+    <ellipse cx="110" cy="84" rx="${fluffy ? 56 : 50}" ry="${fluffy ? 52 : 48}" fill="${color}"/>
+    ${mask ? `<path d="M74 76 Q78 58 98 66 Q110 72 122 66 Q142 58 146 76 Q150 112 110 130 Q70 112 74 76 Z" fill="#f6f4f0"/>` : ""}
+    ${floppy}
+    <ellipse cx="110" cy="108" rx="30" ry="22" fill="${mask ? "#f6f4f0" : "#f1d3b0"}"/>
+    <ellipse cx="90" cy="80" rx="7" ry="8" fill="${mask ? "#4f8fd6" : "#24343a"}"/><ellipse cx="130" cy="80" rx="7" ry="8" fill="${mask ? "#4f8fd6" : "#24343a"}"/>
     <circle cx="92" cy="77" r="2.5" fill="#fff"/><circle cx="132" cy="77" r="2.5" fill="#fff"/>
     <ellipse cx="110" cy="98" rx="11" ry="8" fill="#24343a"/>
     <path d="M110 106 v8 q-8 8 -16 2 M110 114 q8 8 16 2" stroke="#24343a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
     <path d="M104 118 q6 14 12 0 z" fill="#e8737a"/>
   </svg>`;
+}
+
+/** Profile picture for a pet: drawn from its breed; mixed / unknown breeds get one of a few colours. */
+const CAT_BREED_ART: Record<string, CatOpts> = {
+  persian: { color: "#f4f1ec", belly: "#ffffff", stripe: "#d9cfc3", fluffy: true },
+  british: { color: "#8d9ba3", belly: "#b9c4ca", stripe: "#76858d" },
+  scottish: { color: "#cbb8a2", belly: "#efe3d3", stripe: "#a8937c", folded: true },
+  siamese: { color: "#f2e5cf", belly: "#fbf4e6", points: "#5b4535" },
+  maine_coon: { color: "#a8723f", belly: "#e9d3b3", stripe: "#6e4823", fluffy: true, tufts: true },
+};
+const DOG_BREED_ART: Record<string, DogOpts> = {
+  pomeranian: { color: "#f0a35e", ear: "#f0a35e", ears: "pointy", fluffy: true },
+  shih_tzu: { color: "#f3efe7", ear: "#a07850" },
+  yorkie: { color: "#c99a5e", ear: "#c99a5e", ears: "pointy" },
+  husky: { color: "#7d8b94", ear: "#7d8b94", ears: "pointy", mask: true },
+  golden: { color: "#e2ad5f", ear: "#c98a3b" },
+  shepherd: { color: "#b9824a", ear: "#3a302a", ears: "pointy" },
+};
+const CAT_COLORS = ["#f0a35e", "#9aa7ad", "#3b3b3b", "#f5f5f5"];
+const DOG_COLORS = ["#c98a4b", "#e2b57f", "#7a4f2a", "#d9c3a0"];
+const SWEATERS = ["#f4c430", "#13566c", "#e8579b", "#4f9ac2"];
+export function petArt(p: { id?: string; species?: string; breed?: string | null }) {
+  const i = (p.id || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 4;
+  if (p.species === "dog") return dogArt({ sweater: SWEATERS[i], ...(DOG_BREED_ART[p.breed || ""] || { color: DOG_COLORS[i] }) });
+  return catArt(CAT_BREED_ART[p.breed || ""] || { color: CAT_COLORS[i], belly: i === 2 ? "#6b6b6b" : "#fbe3c6" });
 }
 
 export function bowlArt() {
