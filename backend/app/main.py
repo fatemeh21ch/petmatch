@@ -343,6 +343,9 @@ class Signup(BaseModel):
     role: str = Field(pattern="^(buyer|seller)$")   # admins are never created from the public form
     store_name: str | None = Field(None, max_length=40)
     website: str | None = Field(None, max_length=80)
+    # the store's own shipping rule (toman): flat fee, and the order total from which shipping is free (0 = never)
+    shipping_flat: int | None = Field(None, ge=0, le=5_000_000)
+    free_over: int | None = Field(None, ge=0, le=100_000_000)
 
 
 @app.get("/api/v1/auth/demo-accounts")
@@ -371,8 +374,13 @@ def signup(s: Signup):
         if not (s.store_name or "").strip():
             raise HTTPException(422, "نام فروشگاه را وارد کنید")
         data["website"] = store_link(s.website)
+        if s.shipping_flat is None:
+            raise HTTPException(422, "هزینه ارسال فروشگاه را وارد کنید (اگر رایگان است ۰ بنویسید)")
+        data["shipping"] = {"flat": s.shipping_flat, "free_over": s.free_over or 0}
     else:
         data["website"] = None
+    data.pop("shipping_flat", None)
+    data.pop("free_over", None)
     return auth.request_otp(phone, "signup", data)
 
 
@@ -571,8 +579,7 @@ def admin_analytics():
 # signup form). Products still come only from feeds, so a new store shows products once its feed is
 # connected. Blocking removes every offer of the store.
 class Approve(BaseModel):
-    shipping_flat: int = Field(0, ge=0, le=5_000_000)
-    free_over: int = Field(0, ge=0, le=100_000_000)
+    # shipping comes from the store's own signup; the admin only picks the brand colour
     color: str = Field("#13566c", pattern=r"^#[0-9a-fA-F]{6}$")
 
 
@@ -619,8 +626,9 @@ def admin_approve_seller(phone: str, a: Approve):
     owner = _waiting_seller(phone)
     name = (owner.get("store_name") or "").strip()
     website = owner.get("website") or ""
-    if not name or not website.startswith("https://"):
-        raise HTTPException(422, "نام یا لینک فروشگاه در ثبت‌نام کامل نیست؛ درخواست را رد کنید")
+    shipping = owner.get("shipping")
+    if not name or not website.startswith("https://") or not shipping:
+        raise HTTPException(422, "نام، لینک یا هزینه ارسال فروشگاه در ثبت‌نام کامل نیست؛ درخواست را رد کنید")
     with _lock:
         cat = catalog()
         if any(s["name"] == name for s in cat["sellers"].values()):
@@ -630,7 +638,7 @@ def admin_approve_seller(phone: str, a: Approve):
         data = pipeline.load_stores()
         sid = _store_id(website, cat["sellers"])
         store = dict(id=sid, name=name, website=website, rating=4.0, verified=False,
-                     shipping=dict(flat=a.shipping_flat, free_over=a.free_over), accuracy=0.9,
+                     shipping=dict(flat=int(shipping["flat"]), free_over=int(shipping.get("free_over") or 0)), accuracy=0.9,
                      format="در انتظار اتصال فید", color=a.color, owner=owner["phone"],
                      added_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
         data["added"].append(store)

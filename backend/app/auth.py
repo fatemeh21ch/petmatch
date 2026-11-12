@@ -83,7 +83,7 @@ def all_users() -> list:
 
 
 def public_user(u: dict) -> dict:
-    return {k: u.get(k) for k in ("phone", "name", "role", "seller_id", "store_name", "website", "status", "reject_reason")} \
+    return {k: u.get(k) for k in ("phone", "name", "role", "seller_id", "store_name", "website", "shipping", "status", "reject_reason")} \
         | {"role_fa": ROLE_FA[u["role"]]}
 
 
@@ -123,7 +123,7 @@ def verify_otp(phone: str, code: str) -> dict:
     if entry["purpose"] == "signup":
         s = entry["signup"]
         user = {"phone": phone, "name": s["name"], "role": s["role"], "seller_id": None,
-                "store_name": s.get("store_name"), "website": s.get("website"),
+                "store_name": s.get("store_name"), "website": s.get("website"), "shipping": s.get("shipping"),
                 "status": "pending" if s["role"] == "seller" else "active",
                 "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         _save_user(user)

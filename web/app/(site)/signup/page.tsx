@@ -7,22 +7,27 @@ import { Svg, Ui } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dogArt } from "@/lib/art";
 import { toast, useAuth } from "@/lib/client";
+import { fa } from "@/lib/format";
+
+const num = (s: string) => +s.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٬,\s]/g, "");
 
 function SignupView() {
   const params = useSearchParams();
   const router = useRouter();
   const { refresh } = useAuth();
   const [role, setRole] = useState<"buyer" | "seller">(params.get("role") === "seller" ? "seller" : "buyer");
-  const [form, setForm] = useState({ name: "", phone: params.get("phone") || "", store_name: "", website: "", terms: false });
+  const [form, setForm] = useState({ name: "", phone: params.get("phone") || "", store_name: "", website: "", shipping_flat: "", free_over: "", terms: false });
   const [sent, setSent] = useState<any>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const body = () => ({ phone: form.phone, name: form.name, role, ...(role === "seller" ? { store_name: form.store_name, website: form.website || null } : {}) });
+  const body = () => ({ phone: form.phone, name: form.name, role, ...(role === "seller" ? { store_name: form.store_name, website: form.website || null,
+    shipping_flat: form.shipping_flat.trim() === "" ? null : num(form.shipping_flat), free_over: num(form.free_over) || 0 } : {}) });
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.terms) { setErr("پذیرفتن قوانین لازم است"); return; }
     if (role === "seller" && !form.website.trim()) { setErr("لینک فروشگاه را وارد کنید (مثلاً petshop.ir)"); return; }
+    if (role === "seller" && (form.shipping_flat.trim() === "" || Number.isNaN(num(form.shipping_flat)))) { setErr("هزینه ارسال فروشگاه را وارد کنید (اگر رایگان است ۰ بنویسید)"); return; }
     setBusy(true); setErr("");
     try { setSent(await api("/api/v1/auth/signup", { method: "POST", json: body() })); }
     catch (e: any) { setErr(e.message); }
@@ -63,7 +68,17 @@ function SignupView() {
                   <div className="field"><label htmlFor="ws">لینک فروشگاه</label><input id="ws" type="text" dir="ltr" required placeholder="petshop.ir" maxLength={80} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
                 </div>
               )}
-              {role === "seller" && <div className="hint">لینک سایت فروشگاهتان را بنویسید (https). مدیر پت‌مچ آن را بررسی می‌کند و فروشگاه فقط بعد از تأیید مدیر اضافه می‌شود؛ تا آن موقع پنل در حالت «در انتظار تأیید» است.</div>}
+              {role === "seller" && (
+                <div className="row2">
+                  <div className="field"><label htmlFor="sh">هزینه ارسال (تومان)</label>
+                    <input id="sh" type="text" inputMode="numeric" required placeholder="مثلاً ۶۰۰۰۰ (رایگان: ۰)" value={form.shipping_flat} onChange={(e) => setForm({ ...form, shipping_flat: e.target.value })} />
+                    {num(form.shipping_flat) > 0 && <small className="muted">{fa(num(form.shipping_flat))} تومان</small>}</div>
+                  <div className="field"><label htmlFor="fo">ارسال رایگان برای خرید بالای (تومان، اختیاری)</label>
+                    <input id="fo" type="text" inputMode="numeric" placeholder="مثلاً ۳۰۰۰۰۰۰ (ندارد: خالی)" value={form.free_over} onChange={(e) => setForm({ ...form, free_over: e.target.value })} />
+                    {num(form.free_over) > 0 && <small className="muted">{fa(num(form.free_over))} تومان</small>}</div>
+                </div>
+              )}
+              {role === "seller" && <div className="hint">هزینه ارسال را خودتان اعلام می‌کنید و در «قیمت نهایی» همه محصولاتتان حساب می‌شود. لینک سایت فروشگاهتان را بنویسید (https). مدیر پت‌مچ آن را بررسی می‌کند و فروشگاه فقط بعد از تأیید مدیر اضافه می‌شود؛ تا آن موقع پنل در حالت «در انتظار تأیید» است.</div>}
               <label className="check"><input type="checkbox" checked={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.checked })} />
                 <span>قوانین پت‌مچ و سیاست حریم خصوصی را می‌پذیرم. فقط شماره موبایل و نام ذخیره می‌شود.</span></label>
               {err && <div className="err-msg">{err} {err.includes("وارد شوید") && <Link href="/login">ورود</Link>}</div>}

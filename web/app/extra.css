@@ -210,3 +210,6 @@ td.cmp-win b, td.cmp-win { color: #145c3c; }
 .breed-pick select { flex: 1; }
 .breed-prev { width: 56px; height: 56px; border-radius: 16px; background: var(--brand-soft); display: grid; place-items: center; flex-shrink: 0; }
 .breed-prev svg { width: 52px; height: 52px; }
+.approval .ap-ship { display: flex; gap: 10px; margin-top: 10px; }
+.approval .ap-ship span { flex: 1; background: var(--soft); border-radius: 12px; padding: 8px 12px; display: grid; }
+.approval .ap-ship small { color: var(--muted); font-size: 12px; }

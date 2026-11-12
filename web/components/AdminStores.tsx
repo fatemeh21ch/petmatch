@@ -4,17 +4,14 @@ import { api } from "@/lib/api";
 import { toast } from "@/lib/client";
 import { fa } from "@/lib/format";
 
-const toLatin = (s: string) => s.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٬,\s]/g, "");
-
-/** One waiting seller signup: open the link, set shipping, approve (creates the store) or reject. */
+/** One waiting seller signup: open the link, check the store's own shipping rule, approve (creates the store) or reject. */
 function Approval({ u, onDone }: { u: any; onDone: () => void }) {
-  const [f, setF] = useState({ shipping_flat: "0", free_over: "0", color: "#13566c" });
+  const [color, setColor] = useState("#13566c");
   const [busy, setBusy] = useState(false);
   const approve = async () => {
     setBusy(true);
     try {
-      const s = await api(`/api/v1/admin/sellers/${u.phone}/approve`, { method: "POST", json: {
-        shipping_flat: +toLatin(f.shipping_flat) || 0, free_over: +toLatin(f.free_over) || 0, color: f.color } });
+      const s = await api(`/api/v1/admin/sellers/${u.phone}/approve`, { method: "POST", json: { color } });
       toast(`فروشگاه «${s.name}» تأیید و اضافه شد.`); onDone();
     } catch (e: any) { toast(e.message); }
     finally { setBusy(false); }
@@ -34,13 +31,14 @@ function Approval({ u, onDone }: { u: any; onDone: () => void }) {
         {u.website ? <a className="btn btn-ghost btn-sm" href={u.website} target="_blank" rel="noopener noreferrer nofollow" dir="ltr">{u.website.replace("https://", "")} ↗</a>
           : <span className="pill bad">بدون لینک</span>}
       </div>
-      <div className="form-row">
-        <div className="field"><label>هزینه ارسال (تومان)</label><input type="text" inputMode="numeric" value={f.shipping_flat} onChange={(e) => setF({ ...f, shipping_flat: e.target.value })} /></div>
-        <div className="field"><label>ارسال رایگان از (۰ = ندارد)</label><input type="text" inputMode="numeric" value={f.free_over} onChange={(e) => setF({ ...f, free_over: e.target.value })} /></div>
+      <div className="ap-ship">
+        <span><small>هزینه ارسال اعلام‌شده</small><b>{u.shipping ? (u.shipping.flat ? `${fa(u.shipping.flat)} تومان` : "رایگان") : "—"}</b></span>
+        <span><small>ارسال رایگان از</small><b>{u.shipping?.free_over ? `${fa(u.shipping.free_over)} تومان` : "ندارد"}</b></span>
       </div>
+      {!u.shipping && <div className="alert warn" style={{ marginTop: 8 }}>این درخواست قبل از اجباری شدن هزینه ارسال ثبت شده؛ قابل تأیید نیست.</div>}
       <div className="ap-acts">
-        <label className="muted" style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>رنگ <input type="color" className="color-in" value={f.color} onChange={(e) => setF({ ...f, color: e.target.value })} /></label>
-        <button className="btn btn-good btn-sm" disabled={busy || !u.website} onClick={approve}>{busy ? "…" : "تأیید و ساخت فروشگاه"}</button>
+        <label className="muted" style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>رنگ <input type="color" className="color-in" value={color} onChange={(e) => setColor(e.target.value)} /></label>
+        <button className="btn btn-good btn-sm" disabled={busy || !u.website || !u.shipping} onClick={approve}>{busy ? "…" : "تأیید و ساخت فروشگاه"}</button>
         <button className="btn btn-bad btn-sm" disabled={busy} onClick={reject}>رد درخواست</button>
       </div>
     </div>

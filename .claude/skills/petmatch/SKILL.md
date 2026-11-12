@@ -39,7 +39,7 @@ change only through its feed (`backend/data/raw/*` + `pipeline._ingest()`). The 
 
 ## Stores (admin)
 `components/AdminStores.tsx` ↔ `GET /api/v1/admin/stores`, `POST /admin/sellers/{phone}/approve|reject` (stores are only added
-by approving a seller signup), `POST /admin/stores/{id}/block|unblock`. State lives in
+by approving a seller signup; name, link and shipping come from the signup, the admin only picks a colour), `POST /admin/stores/{id}/block|unblock`. State lives in
 `backend/data/stores.json` via `pipeline.load_stores()/save_stores()`; `pipeline.all_sellers()` tags each store with `status`
 and `source` (feed/admin). Tests must restore `stores.json` (see `_restore_stores` in the tests).
 

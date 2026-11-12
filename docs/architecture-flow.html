@@ -1,0 +1,244 @@
+<title>معماری پت‌مچ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column of numbered flows; each flow is a chain of "stations" joined by arrows, like a feed travelling through the backend. */
+:root {
+  --bg: #f6f9fa; --surface: #ffffff; --ink: #12333f; --ink-2: #47616b; --muted: #7d9098;
+  --line: #dbe6ea; --brand: #13566c; --brand-soft: #e2eff4; --sun: #f4c542; --sun-soft: #fff4d1;
+  --good: #1f8a5a; --good-soft: #e1f4ea; --warn: #a65d00; --warn-soft: #fff0da; --bad: #b8382b; --bad-soft: #fde9e7;
+  --ai: #5a49c9; --ai-soft: #ece9fb;
+  --f-body: "Vazirmatn", Tahoma, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1b20; --surface: #132831; --ink: #e4eef1; --ink-2: #b2c6cd; --muted: #85a0a8;
+  --line: #24414b; --brand: #6cc0dc; --brand-soft: #173a46; --sun: #f4c542; --sun-soft: #3a3214;
+  --good: #57c98f; --good-soft: #143528; --warn: #f0a84a; --warn-soft: #3a2a12; --bad: #f08273; --bad-soft: #3e1d19;
+  --ai: #a99cf5; --ai-soft: #262049; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d1b20; --surface: #132831; --ink: #e4eef1; --ink-2: #b2c6cd; --muted: #85a0a8;
+  --line: #24414b; --brand: #6cc0dc; --brand-soft: #173a46; --sun: #f4c542; --sun-soft: #3a3214;
+  --good: #57c98f; --good-soft: #143528; --warn: #f0a84a; --warn-soft: #3a2a12; --bad: #f08273; --bad-soft: #3e1d19;
+  --ai: #a99cf5; --ai-soft: #262049; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.85 var(--f-body); margin: 0; direction: rtl; }
+.wrap { max-width: 1060px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { line-height: 1.4; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(26px, 4vw, 34px); font-weight: 800; }
+h2 { font-size: 21px; font-weight: 800; display: flex; align-items: baseline; gap: 10px; }
+h2 .n { font: 600 13px var(--f-mono); color: var(--brand); background: var(--brand-soft); border-radius: 8px; padding: 1px 8px; }
+h3 { font-size: 15px; font-weight: 800; }
+p { margin: 0; max-width: 68ch; }
+code, .mono { font-family: var(--f-mono); font-size: 12.5px; direction: ltr; unicode-bidi: isolate; }
+code { background: var(--brand-soft); color: var(--brand); border-radius: 6px; padding: 0 5px; }
+.lead { color: var(--ink-2); margin-top: 6px; }
+section { margin-top: 40px; display: grid; gap: 14px; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.toc a { color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 12px; font-size: 13px; }
+.toc a:hover, .toc a:focus-visible { border-color: var(--brand); color: var(--brand); }
+:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+/* the short answer */
+.answer { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; display: grid; gap: 12px; margin-top: 22px; }
+.answer .row { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: baseline; }
+.answer .k { font-weight: 800; color: var(--brand); }
+@media (max-width: 640px) { .answer .row { grid-template-columns: 1fr; gap: 2px; } }
+
+/* stations + arrows */
+.chain { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+.st { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: grid; gap: 4px; min-width: 0; }
+.st .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.st .tag { font: 600 11.5px var(--f-mono); border-radius: 6px; padding: 0 7px; background: var(--brand-soft); color: var(--brand); direction: ltr; }
+.st.ai { border-color: var(--ai); background: var(--ai-soft); }
+.st.ai .tag { background: var(--surface); color: var(--ai); }
+.st.data { border-style: dashed; }
+.st .ex { font-size: 13px; color: var(--ink-2); background: var(--bg); border-radius: 10px; padding: 6px 10px; margin-top: 4px; }
+.arrow { align-self: center; color: var(--muted); font-size: 18px; line-height: 1; padding: 4px 0; }
+.arrow::before { content: "↓"; }
+.arrow small { font-size: 12px; margin-right: 6px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.split { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.split .st { border-width: 1px 4px 1px 1px; }
+.split .good { border-right-color: var(--good); } .split .warn { border-right-color: var(--warn); } .split .new { border-right-color: var(--brand); }
+.split b.num { font: 700 20px var(--f-mono); }
+@media (max-width: 720px) { .split { grid-template-columns: 1fr; } }
+.decision { align-self: center; background: var(--sun-soft); border: 1px solid var(--sun); border-radius: 12px; padding: 6px 14px; font-weight: 700; font-size: 14px; text-align: center; max-width: 100%; }
+.fork { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fork > div { display: grid; gap: 0; align-content: start; }
+.fork .lbl { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; padding: 4px 0; }
+@media (max-width: 640px) { .fork { grid-template-columns: 1fr; } }
+
+/* tables */
+.tw { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 640px; }
+th, td { text-align: right; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12.5px; color: var(--muted); font-weight: 700; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; direction: ltr; text-align: left; }
+.pill { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 6px; padding: 0 7px; }
+.pill.gen { background: var(--sun-soft); color: var(--warn); } .pill.run { background: var(--brand-soft); color: var(--brand); } .pill.lab { background: var(--good-soft); color: var(--good); }
+.formula { font: 600 14px var(--f-mono); direction: ltr; text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px; overflow-x: auto; }
+.note { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>معماری پت‌مچ</h1>
+    <p class="lead">از فید خام هفت پت‌شاپ تا «بهترین خرید» برای حیوان شما: چه زبانی، چه کتابخانه‌ای، چه نوع جست‌وجویی و چه داده‌ای، و هر درخواست دقیقاً از کجا می‌گذرد.</p>
+    <nav class="toc" aria-label="بخش‌ها">
+      <a href="#answer">پاسخ کوتاه</a><a href="#layers">لایه‌ها</a><a href="#pipeline">مسیر داده</a>
+      <a href="#search">مسیر یک جست‌وجو</a><a href="#stack">زبان و کتابخانه</a><a href="#data">دیتاست‌ها</a>
+    </nav>
+  </header>
+
+  <div class="answer" id="answer">
+    <div class="row"><span class="k">جست‌وجو</span><span>موتور جست‌وجوی جدا (Elasticsearch یا Meilisearch) <b>نداریم</b>. جست‌وجو درون‌حافظه و با پایتون است: قواعد و regex فارسی برای فهم نیت، واژه‌نامه برند و ویژگی (<code>kb.py</code>)، و تطبیق فازی <b>RapidFuzz</b> برای غلط تایپی. بعد فیلتر و رتبه‌بندی با فرمول ارزش خرید. برای نسخه واقعی Meilisearch در نظر گرفته شده.</span></div>
+    <div class="row"><span class="k">زبان‌ها</span><span>بک‌اند <b>Python 3.11</b> با <b>FastAPI</b>؛ فرانت <b>TypeScript</b> با <b>Next.js 16</b> و <b>React 19</b>؛ استایل CSS ساده؛ همه تصویرها SVG دست‌ساز.</span></div>
+    <div class="row"><span class="k">داده</span><span>دیتابیس نداریم؛ همه‌چیز فایل JSON و CSV است. ۷ فید ساختگی ولی واقعی‌نما (۲۶۸ آگهی) که <code>seed/generate.py</code> می‌سازد، برچسب مرجع تطبیق، ۹۰ روز تاریخچه قیمت و ۳۰ روز آمار نمایشی.</span></div>
+    <div class="row"><span class="k">هوش مصنوعی</span><span>اختیاری، فقط با <code>ANTHROPIC_API_KEY</code>: مدل <code>claude-opus-5-5</code> در دو جا، یکی فهم جمله‌ای که قواعد نفهمیدند و یکی نوشتن خلاصه از دلیل‌های محاسبه‌شده. بدون کلید هم کل محصول کار می‌کند.</span></div>
+  </div>
+
+  <section id="layers" aria-labelledby="h-layers">
+    <h2 id="h-layers"><span class="n">1</span> لایه‌ها: یک درخواست از مرورگر تا فایل</h2>
+    <div class="chain">
+      <div class="st"><h3>مرورگر کاربر</h3><p>خریدار، فروشنده یا مدیر. پروفایل حیوان، علاقه‌مندی‌ها و فهرست مقایسه فقط در <code>localStorage</code> همین دستگاه می‌ماند.</p></div>
+      <div class="arrow"><small>HTTP، همیشه به پورت ۳۰۰۰</small></div>
+      <div class="st"><h3>فرانت‌اند Next.js</h3>
+        <div class="meta"><span class="tag">web/</span><span class="tag">TypeScript</span><span class="tag">:3000</span></div>
+        <p>صفحه‌های عمومی (خانه، محصول) روی سرور رندر می‌شوند برای سئو؛ جست‌وجو، پنل‌ها و حیوان من در مرورگر. هر <code>/api/*</code> را به بک‌اند پراکسی می‌کند، پس کوکی ورود بدون CORS کار می‌کند.</p></div>
+      <div class="arrow"><small>پراکسی /api/* ← ۸۰۰۰</small></div>
+      <div class="st"><h3>API با FastAPI</h3>
+        <div class="meta"><span class="tag">backend/app/main.py</span><span class="tag">Python</span><span class="tag">:8000</span></div>
+        <p>همه endpointها: جست‌وجو، محصول، مقایسه، ورود با OTP، کلیک خروجی، پنل فروشنده و مدیر. دسترسی نقش‌ها روی سرور با <code>require_role</code> چک می‌شود.</p></div>
+      <div class="arrow"></div>
+      <div class="grid">
+        <div class="st"><h3>پایپ‌لاین داده</h3><div class="meta"><span class="tag">pipeline.py</span></div><p>فید ← کاتالوگ. هنگام بالا آمدن سرور و بعد از هر تصمیم مدیر اجرا می‌شود.</p></div>
+        <div class="st"><h3>متن فارسی</h3><div class="meta"><span class="tag">text.py</span> <span class="tag">kb.py</span></div><p>یکسان‌سازی ي/ك، اعداد، نیم‌فاصله، وزن، و استخراج برند و ویژگی.</p></div>
+        <div class="st"><h3>جست‌وجو و رتبه</h3><div class="meta"><span class="tag">search.py</span></div><p>فهم نیت، پروفایل و نژاد، فیلتر، امتیاز ارزش، دلیل‌ها.</p></div>
+        <div class="st"><h3>هزینه ماهانه</h3><div class="meta"><span class="tag">feeding.py</span></div><p>انرژی روزانه از وزن و سن ← گرم در روز ← تومان در ماه.</p></div>
+        <div class="st"><h3>ورود و نقش‌ها</h3><div class="meta"><span class="tag">auth.py</span></div><p>موبایل و کد یک‌بارمصرف، نشست در حافظه، کوکی httpOnly.</p></div>
+        <div class="st"><h3>آمار</h3><div class="meta"><span class="tag">analytics.py</span></div><p>بازدید، کلیک و لاگ جست‌وجو برای پنل‌ها.</p></div>
+        <div class="st ai"><h3>Claude (اختیاری)</h3><div class="meta"><span class="tag">ai.py</span></div><p>فقط داده محاسبه‌شده می‌بیند و چیزی از خودش نمی‌سازد.</p></div>
+      </div>
+      <div class="arrow"></div>
+      <div class="st data"><h3>فایل‌ها، بدون دیتابیس</h3><div class="meta"><span class="tag">backend/data/</span></div><p>فیدهای خام و برچسب‌ها در گیت؛ کاربرها، رویدادها و تصمیم‌ها فایل‌های زمان اجرا هستند (جزئیات در بخش ۵).</p></div>
+    </div>
+  </section>
+
+  <section id="pipeline" aria-labelledby="h-pipe">
+    <h2 id="h-pipe"><span class="n">2</span> مسیر داده: از ۷ فید نامرتب تا ۵۷ محصول</h2>
+    <p class="note">این بخش همان چیزی است که «تطبیق محصول» در پنل مدیر نشان می‌دهد. هر مرحله یک تابع در <code>pipeline.py</code> یا <code>text.py</code> است.</p>
+    <div class="chain">
+      <div class="st data"><h3>۷ فید خام، ۲۶۸ آگهی</h3><div class="meta"><span class="tag">data/raw/*.csv|json</span></div>
+        <p>هر فروشگاه فرمت خودش را دارد: CSV فارسی، JSON انگلیسی با ریال، JSON تودرتو، ستون‌های فینگلیش، «۳٬۱۹۰ هزار تومان».</p></div>
+      <div class="arrow"></div>
+      <div class="st"><h3>آداپتور هر فروشگاه</h3><div class="meta"><span class="tag">_ingest()</span></div>
+        <p>هر فرمت را به یک شکل واحد تبدیل می‌کند: شناسه، فروشگاه، عنوان، قیمت به تومان، موجودی، لینک، زمان بررسی. فید فروشگاه مسدود اصلاً خوانده نمی‌شود.</p></div>
+      <div class="arrow"></div>
+      <div class="st"><h3>اعتبارسنجی</h3><div class="meta"><span class="tag">_validate()</span></div><p>عنوان خالی، قیمت خارج از بازه و لینک غیر https رد می‌شوند.</p></div>
+      <div class="arrow"></div>
+      <div class="st"><h3>یکسان‌سازی و استخراج ویژگی</h3><div class="meta"><span class="tag">text.normalize</span><span class="tag">text.extract</span></div>
+        <p>ي←ی، ك←ک، ۲←2، «دو کیلویی»←2000 گرم؛ بعد برند، حیوان، نوع، رده سنی، مدل، طعم، سایز و وزن.</p>
+        <div class="ex">«غذاي خشك گربه رويال كنين كيتن ۲ كيلويي» ← <span class="mono">brand=royal_canin species=cat type=dry stage=kitten amount=2000g</span></div></div>
+      <div class="arrow"></div>
+      <div class="st"><h3>تطبیق: کدام آگهی‌ها یک محصول‌اند؟</h3><div class="meta"><span class="tag">match()</span><span class="tag">RapidFuzz token_set_ratio</span></div>
+        <p>فقط آگهی‌های هم‌برند، هم‌حیوان و هم‌واحد با هم مقایسه می‌شوند. قاعده سخت: وزن، مدل، طعم یا رده سنی متفاوت هرگز ادغام نمی‌شوند (۴۸ ادغام اشتباه جلوگیری شد).</p></div>
+      <div class="formula">S = 0.40·name + 0.20·brand + 0.25·weight + 0.15·type</div>
+      <div class="arrow"></div>
+      <div class="split">
+        <div class="st good"><h3>S ≥ 0.95</h3><p>ادغام خودکار</p><b class="num">209</b></div>
+        <div class="st warn"><h3>0.75 ≤ S &lt; 0.95</h3><p>صف بررسی انسانی در پنل مدیر</p><b class="num">2</b></div>
+        <div class="st new"><h3>S &lt; 0.75</h3><p>محصول جدید (مرجع)</p><b class="num">57</b></div>
+      </div>
+      <div class="arrow"></div>
+      <div class="st"><h3>کاتالوگ</h3><div class="meta"><span class="tag">build_catalog()</span></div>
+        <p>برای هر محصول، پیشنهاد هر فروشگاه با قیمت نهایی (کالا + ارسال)، قیمت هر کیلو، قیمت <b>مشکوک</b> (۳۵٪+ زیر میانه بازار) و قیمت <b>قدیمی</b> (۴۸ ساعت+). Precision و Recall روی برچسب مرجع: ۱۰۰٪.</p></div>
+    </div>
+  </section>
+
+  <section id="search" aria-labelledby="h-search">
+    <h2 id="h-search"><span class="n">3</span> مسیر یک جست‌وجو</h2>
+    <p class="note">مثال: کاربر با پروفایل «پیشی، پرشین، ۶ ماهه، ۴ کیلو، حساس به مرغ» می‌نویسد <b>«غذای خشک گربه ارزان»</b>. هر کادر خاکستری خروجی همان مرحله برای این مثال است.</p>
+    <div class="chain">
+      <div class="st"><h3>درخواست</h3><div class="meta"><span class="tag">GET /api/v1/search?q=…&amp;pet=…</span></div>
+        <p>از پروفایل فقط نوع، سن به ماه، وزن، نژاد و حساسیت فرستاده می‌شود؛ نام و تاریخ تولد نه.</p></div>
+      <div class="arrow"></div>
+      <div class="st"><h3>فهم نیت با قواعد</h3><div class="meta"><span class="tag">parse_rules()</span><span class="tag">regex</span><span class="tag">kb.VOCAB</span><span class="tag">RapidFuzz ≥ 78</span></div>
+        <p>ترتیب: کلمه‌های مرتب‌سازی، بودجه («زیر ۳ میلیون»)، «بدون مرغ»، وزن، بعد هر کلمه با واژه‌نامه؛ کلمه‌ای که دقیق پیدا نشود با شباهت فازی (مثل «رویل کنن»).</p>
+        <div class="ex">«ارزان» ← sort=cheapest · «گربه» ← species=cat · «غذای خشک» ← type=dry</div></div>
+      <div class="arrow"></div>
+      <div class="decision">قواعد چیزی فهمیدند؟</div>
+      <div class="fork">
+        <div><div class="lbl">بله (بیشتر جست‌وجوها)</div><div class="st"><p>با همین نیت ادامه بده.</p></div></div>
+        <div><div class="lbl">نه، کلمه ناشناخته ماند</div>
+          <div class="st ai"><h3>Claude، اگر کلید هست</h3><div class="meta"><span class="tag">ai.parse_intent()</span><span class="tag">claude-opus-5-5</span></div><p>جمله را به همان ساختار نیت تبدیل می‌کند (خروجی JSON با schema).</p></div>
+          <div class="arrow"><small>اگر نه</small></div>
+          <div class="st"><h3>جست‌وجوی فازی روی نام</h3><div class="meta"><span class="tag">fuzzy_fallback()</span></div><p>فقط شباهت ۸۵٪+ روی کلمه‌های نام؛ نتیجه خالی صادقانه بهتر از نتیجه بی‌ربط است.</p></div></div>
+      </div>
+      <div class="arrow"></div>
+      <div class="st"><h3>پروفایل و نژاد</h3><div class="meta"><span class="tag">apply_profile()</span><span class="tag">kb.BREEDS</span></div>
+        <p>جای خالی نیت را پر می‌کند، ولی چیزی را که کاربر نوشته عوض نمی‌کند: رده سنی، جثه سگ، عقیم بودن، حساسیت‌ها و قواعد نژاد.</p>
+        <div class="ex">۶ ماهه ← بچه‌گربه · مرغ ← حذف · پرشین ← خاک بدون عطر، کراکت پرشین از ۱۲ ماهگی</div></div>
+      <div class="arrow"></div>
+      <div class="st"><h3>فیلتر</h3><div class="meta"><span class="tag">filter_products()</span></div><p>اگر هیچ محصولی نماند، شرط‌ها به‌ترتیب شل می‌شوند (اول وزن، بعد مدل، بعد طعم…) و به کاربر گفته می‌شود کدام شل شد.</p></div>
+      <div class="arrow"></div>
+      <div class="st"><h3>رتبه‌بندی</h3><div class="meta"><span class="tag">rank()</span></div>
+        <p>برای هر محصول بهترین پیشنهاد فروشنده انتخاب و امتیاز ارزش خرید (۰ تا ۱۰۰) حساب می‌شود. مرتب‌سازی پیش‌فرض «بهترین ارزش» است؛ اینجا «ارزان» آن را «ارزان‌ترین قیمت نهایی» کرد.</p></div>
+      <div class="formula">ValueScore = 0.35·P + 0.25·Q + 0.20·R + 0.20·C</div>
+      <p class="note">P قیمت هر کیلو در برابر ارزان‌ترین هم‌نوع · Q تناسب با حیوان (سن، جثه، نژاد، حساسیت) · R امتیاز و دقت قیمت فروشنده · C قیمت نهایی در برابر میانه بازار</p>
+      <div class="arrow"></div>
+      <div class="st"><h3>دلیل‌ها و خلاصه</h3><div class="meta"><span class="tag">explain_facts()</span><span class="tag">ai.explain() اختیاری</span></div>
+        <p>دلیل‌های قابل‌استناد از عددها ساخته می‌شوند («ارزان‌ترین پیشنهاد، فروشنده کم‌اعتبارتری دارد»). اگر کلید باشد، Claude فقط همین دلیل‌ها را به نثر روان می‌نویسد.</p></div>
+      <div class="arrow"><small>JSON</small></div>
+      <div class="st"><h3>صفحه نتایج</h3><div class="meta"><span class="tag">web/app/(site)/search/page.tsx</span></div><p>چیپ‌های «فهمیدیم دنبال این هستی»، کارت «بهترین انتخاب»، مرتب‌سازی، فیلترها و دکمه مقایسه.</p></div>
+    </div>
+  </section>
+
+  <section id="stack" aria-labelledby="h-stack">
+    <h2 id="h-stack"><span class="n">4</span> زبان‌ها و کتابخانه‌ها</h2>
+    <div class="tw"><table>
+      <thead><tr><th>بخش</th><th>زبان / ابزار</th><th>برای چه</th><th>در نسخه واقعی</th></tr></thead>
+      <tbody>
+        <tr><td>API</td><td><b>Python 3.11</b>، FastAPI، Uvicorn، Pydantic</td><td>endpointها، اعتبارسنجی ورودی، مستندات خودکار در <code>/docs</code></td><td>همین</td></tr>
+        <tr><td>تطبیق و غلط تایپی</td><td><b>RapidFuzz</b></td><td><code>token_set_ratio</code> برای شباهت نام آگهی‌ها، <code>ratio</code> برای اصلاح کلمه جست‌وجو</td><td>همین</td></tr>
+        <tr><td>جست‌وجو</td><td>پایتون درون‌حافظه (regex + واژه‌نامه)</td><td>فهم نیت فارسی/انگلیسی، فیلتر، رتبه</td><td>Meilisearch</td></tr>
+        <tr><td>هوش مصنوعی</td><td>Anthropic SDK، مدل <code>claude-opus-5-5</code></td><td>فهم جمله آزاد، خلاصه توضیح (اختیاری)</td><td>همین</td></tr>
+        <tr><td>فرانت</td><td><b>TypeScript</b>، Next.js 16 (App Router)، React 19</td><td>رندر سمت سرور برای سئو، پنل‌ها، فونت Vazirmatn، راست‌چین</td><td>همین</td></tr>
+        <tr><td>نمودار و تصویر</td><td>SVG دست‌ساز</td><td>نمودارهای پنل، بسته محصولات، عکس پروفایل بر اساس نژاد</td><td>عکس واقعی محصول</td></tr>
+        <tr><td>ذخیره‌سازی</td><td>فایل JSON/CSV</td><td>فید، کاربر، رویداد، تصمیم</td><td>PostgreSQL، Redis برای نشست</td></tr>
+        <tr><td>اجرای پایپ‌لاین</td><td>هنگام بالا آمدن سرور</td><td>با ۲۶۸ آگهی چند میلی‌ثانیه</td><td>Celery + Redis، زمان‌بندی هر فید</td></tr>
+        <tr><td>تست</td><td>pytest + TestClient، <code>tsc</code></td><td>۴۰ تست منطق، API، نقش‌ها، تطبیق</td><td>+ Playwright برای UI</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="data" aria-labelledby="h-data">
+    <h2 id="h-data"><span class="n">5</span> دیتاست‌ها</h2>
+    <p class="note">همه فروشگاه‌ها، قیمت‌ها و آمار ساختگی‌اند و این در خود سایت هم نوشته شده. <span class="pill gen">تولیدشده</span> را <code>seed/generate.py</code> می‌سازد، <span class="pill lab">برچسب</span> فقط برای سنجش است، <span class="pill run">زمان اجرا</span> را خود برنامه می‌نویسد و در گیت نیست.</p>
+    <div class="tw"><table>
+      <thead><tr><th>فایل</th><th>نوع</th><th>محتوا</th><th>اندازه</th></tr></thead>
+      <tbody>
+        <tr><td><code>raw/petkade.csv</code></td><td><span class="pill gen">تولیدشده</span></td><td>پت‌کده: CSV فارسی، قیمت تومان</td><td class="num">40</td></tr>
+        <tr><td><code>raw/zoomall.json</code></td><td><span class="pill gen">تولیدشده</span></td><td>زومال: JSON انگلیسی، قیمت ریال</td><td class="num">44</td></tr>
+        <tr><td><code>raw/miomall.csv</code></td><td><span class="pill gen">تولیدشده</span></td><td>میومال: حروف عربی، قیمت با جداکننده</td><td class="num">39</td></tr>
+        <tr><td><code>raw/haposhop.json</code></td><td><span class="pill gen">تولیدشده</span></td><td>هاپوشاپ: JSON تودرتو، فارسی و انگلیسی</td><td class="num">38</td></tr>
+        <tr><td><code>raw/pashmaloo.csv</code></td><td><span class="pill gen">تولیدشده</span></td><td>دنیای پشمالو: غلط تایپی، «هزار تومان»، قیمت مشکوک</td><td class="num">36</td></tr>
+        <tr><td><code>raw/panjetala.csv</code></td><td><span class="pill gen">تولیدشده</span></td><td>پنجه طلا: ستون فینگلیش، قیمت ریالی فارسی</td><td class="num">35</td></tr>
+        <tr><td><code>raw/koochepet.json</code></td><td><span class="pill gen">تولیدشده</span></td><td>کوچه پت: JSON انگلیسی، وزن اعشاری کیلو</td><td class="num">36</td></tr>
+        <tr><td><code>raw/sellers.json</code></td><td><span class="pill gen">تولیدشده</span></td><td>۷ فروشگاه: امتیاز، تأیید، قاعده ارسال، رنگ</td><td class="num">7</td></tr>
+        <tr><td><code>ground_truth.json</code></td><td><span class="pill lab">برچسب</span></td><td>هر آگهی واقعاً کدام محصول است؛ پایپ‌لاین هرگز آن را نمی‌خواند، فقط برای Precision/Recall</td><td class="num">268</td></tr>
+        <tr><td><code>price_history.json</code></td><td><span class="pill gen">تولیدشده</span></td><td>۹۰ روز قیمت هر آگهی، برای نمودار و «کمترین ۹۰ روز»</td><td class="num">268 × 90</td></tr>
+        <tr><td><code>traffic_history.json</code></td><td><span class="pill gen">تولیدشده</span></td><td>۳۰ روز بازدید و کلیک هر آگهی برای پنل فروشنده</td><td class="num">268 × 30</td></tr>
+        <tr><td><code>search_log_seed.json</code></td><td><span class="pill gen">تولیدشده</span></td><td>جست‌وجوهای نمایشی، شامل جست‌وجوهای بی‌نتیجه</td><td class="num">2169</td></tr>
+        <tr><td><code>users.json</code>، <code>events.json</code>، <code>search_log.json</code></td><td><span class="pill run">زمان اجرا</span></td><td>ثبت‌نام‌ها، کلیک و بازدید واقعی، جست‌وجوهای واقعی همین اجرا</td><td class="num">—</td></tr>
+        <tr><td><code>decisions.json</code>، <code>stores.json</code>، <code>reports.json</code></td><td><span class="pill run">زمان اجرا</span></td><td>تصمیم‌های تطبیق مدیر، فروشگاه‌های تأییدشده یا مسدود، گزارش قیمت اشتباه</td><td class="num">—</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">کد کامل در <code>backend/app/</code> و <code>web/</code>.</p>
+  </section>
+</div>

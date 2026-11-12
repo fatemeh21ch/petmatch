@@ -69,8 +69,9 @@ Data: `backend/data/raw/*` feeds (committed), `ground_truth.json` (matching labe
   work without logging in. With `PETMATCH_DEMO_OTP=0` both are off.
 - An explicit **logout** sets `pm_logged_out`: `Guard` then shows the login screen (with one-click demo buttons)
   instead of auto-signing in again; any real login clears it.
-- Sellers must give a store link at signup (`store_link()` adds https://, rejects http). A store exists only after an
-  admin approves that signup; a rejected seller sees the reason in the panel.
+- Sellers must give a store link **and their own shipping rule** (flat fee, free-over amount) at signup (`store_link()` adds
+  https://, rejects http). A store exists only after an admin approves that signup; the admin only picks a colour and cannot
+  change the shipping. A rejected seller sees the reason in the panel.
 - Demo accounts: buyer `09120000001`, seller پت‌کده `09120000002`, seller پنجه طلا `09120000005`, admin `09120000003`.
 - In matching, a false merge is worse than a missed merge: uncertain → review queue, never auto-merge.
 - Prices are integers in **toman**; "total" = price + shipping. Show numbers with `fa()`.
@@ -80,4 +81,4 @@ Data: `backend/data/raw/*` feeds (committed), `ground_truth.json` (matching labe
 
 ## Docs
 `README.md` (overview, run, features) · 
-`.claude/skills/petmatch/SKILL.md` (task recipes).
+`docs/architecture-flow.html` (flowchart page: layers, pipeline, one search, stack, datasets; published as an Artifact) · `.claude/skills/petmatch/SKILL.md` (task recipes).

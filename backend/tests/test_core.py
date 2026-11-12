@@ -199,8 +199,10 @@ def test_signup_seller_is_pending_and_admin_cannot_self_register():
                                                "store_name": "تست"}).status_code == 422          # store link is required
     assert c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller",
                                                "store_name": "تست", "website": "http://x.ir"}).status_code == 422
+    assert c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller", "store_name": "تست",
+                                               "website": "test-shop.ir"}).status_code == 422      # shipping is required too
     r = c.post("/api/v1/auth/signup", json={"phone": "09121112233", "name": "فروشگاه تست", "role": "seller", "store_name": "تست",
-                                            "website": "test-shop.ir"})
+                                            "website": "test-shop.ir", "shipping_flat": 0})
     code = r.json()["demo_code"]
     u = c.post("/api/v1/auth/otp/verify", json={"phone": "09121112233", "code": code}).json()["user"]
     assert u["role"] == "seller" and u["status"] == "pending"
@@ -270,7 +272,8 @@ def test_admin_blocks_store_offers_disappear_and_unblock_restores():
 
 def _signup_seller(phone, store, website):
     c = _fresh()
-    r = c.post("/api/v1/auth/signup", json={"phone": phone, "name": "رضا", "role": "seller", "store_name": store, "website": website})
+    r = c.post("/api/v1/auth/signup", json={"phone": phone, "name": "رضا", "role": "seller", "store_name": store, "website": website,
+                                            "shipping_flat": 50000, "free_over": 2_000_000})
     assert r.status_code == 200, r.text
     c.post("/api/v1/auth/otp/verify", json={"phone": phone, "code": r.json()["demo_code"]})
     return c
@@ -288,9 +291,11 @@ def test_store_is_added_only_by_admin_approval_of_seller_signup():
         assert a.post("/api/v1/admin/stores", json={"name": "x", "website": "https://x.example"}).status_code in (404, 405)
         waiting = next(u for u in a.get("/api/v1/admin/stores").json()["pending_sellers"] if u["phone"] == phones[0])
         assert waiting["website"] == "https://petland.example" and waiting["store_name"] == "پت‌لند"
-        r = a.post(f"/api/v1/admin/sellers/{phones[0]}/approve", json={"shipping_flat": 50000})
+        assert waiting["shipping"] == {"flat": 50000, "free_over": 2_000_000}
+        r = a.post(f"/api/v1/admin/sellers/{phones[0]}/approve", json={"shipping_flat": 0})   # admin can't override it
         assert r.status_code == 201, r.text
         assert r.json()["id"] == "petland" and r.json()["website"] == "https://petland.example" and r.json()["status"] == "active"
+        assert r.json()["shipping"] == {"flat": 50000, "free_over": 2_000_000}
         assert a.post(f"/api/v1/admin/sellers/{phones[0]}/approve", json={}).status_code == 404   # no longer waiting
         d = c.get("/api/v1/seller/dashboard").json()          # same session: account is now attached
         assert d["status"] == "active" and d["seller"]["id"] == "petland" and d["listings"] == []
