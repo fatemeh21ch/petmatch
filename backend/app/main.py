@@ -1,4 +1,5 @@
 import json
+import secrets
 import statistics
 import threading
 from datetime import datetime, timezone
@@ -342,6 +343,17 @@ def otp_verify(v: OtpVerify, response: Response):
     return {"user": out["user"]}
 
 
+class DemoLogin(BaseModel):
+    phone: str = Field(max_length=20)
+
+
+@app.post("/api/v1/auth/demo-login")
+def demo_login(d: DemoLogin, response: Response):
+    out = auth.demo_login(auth.normalize_phone(d.phone))
+    response.set_cookie(auth.COOKIE, out["token"], max_age=auth.SESSION_TTL, httponly=True, samesite="lax", path="/")
+    return {"user": out["user"]}
+
+
 @app.get("/api/v1/auth/me")
 def me(user: dict | None = Depends(auth.current_user)):
     return {"user": auth.public_user(user) if user else None}
@@ -408,10 +420,12 @@ def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
     totals = analytics.per_listing_totals(ids, 30)
     rows, alerts = [], []
     for L in mine:
-        pid = cat["log"][L["id"]]["product"]
+        entry = cat["log"][L["id"]]
+        pid = entry["product"]
         p = cat["products"].get(pid)
-        if not p:
-            rows.append({"listing_id": L["id"], "title": L["title"], "status": "review", "price": L["price"]})
+        if not p or entry["decision"] == "review":   # waiting for a human: not in the comparison yet
+            rows.append({"listing_id": L["id"], "title": L["title"], "status": "review", "price": L["price"],
+                         "available": L["available"], "manual": bool(L.get("manual"))})
             continue
         me_ = next(o for o in p["offers"] if o["listing_id"] == L["id"])
         rivals = [o for o in p["offers"] if o["available"] and not o["anomaly"] and o["seller_id"] != sid]
@@ -426,7 +440,7 @@ def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
                "best_rival": best_rival and {"seller": best_rival["seller"], "total": best_rival["total"]},
                "gap_pct": gap, "views": v, "clicks": c, "ctr": round(c / v * 100, 1) if v else 0,
                "type": p["type"], "species": p["species"], "brand": p["brand"], "brand_en": kb.BRANDS.get(p["brand"]),
-               "qty_label": p["qty_label"]}
+               "qty_label": p["qty_label"], "manual": bool(L.get("manual"))}
         rows.append(row)
         if me_["anomaly"]:
             alerts.append({"level": "bad", "text": f"قیمت «{p['name_fa']}» با بازار نمی‌خواند و در پیشنهادها نمایش داده نمی‌شود."})
@@ -447,6 +461,143 @@ def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
                  "first_place": sum(1 for r in rows if r.get("position") == 1)},
         "series": series, "listings": rows, "alerts": alerts[:8],
     }
+
+
+# ------------------------------------------------------------------ seller: add / edit products by hand
+# A hand-added product is just one more feed: it goes through the same normalisation, validation and
+# matching as the CSV/JSON feeds, so the seller sees immediately whether it joined an existing product,
+# became a new one, or went to the admin's review queue.
+SELLER_CATEGORIES = [f"{t} {s}" for s in ("گربه", "سگ") for t in ("غذای خشک", "غذای تر", "تشویقی", "خاک")
+                     if not (t == "خاک" and s == "سگ")]
+
+
+class NewListing(BaseModel):
+    title: str = Field(min_length=5, max_length=120)
+    category: str = Field(max_length=30)
+    weight: str = Field("", max_length=30)
+    price_toman: int = Field(ge=1000, le=500_000_000)
+    available: bool = True
+    url: str | None = Field(None, max_length=200)
+
+
+class ListingPatch(BaseModel):
+    price_toman: int | None = Field(None, ge=1000, le=500_000_000)
+    available: bool | None = None
+
+
+def _active_seller(user: dict) -> str:
+    sid = user.get("seller_id")
+    if not sid:
+        raise HTTPException(403, "فروشگاه شما هنوز تأیید نشده است")
+    return sid
+
+
+def _listing_record(n: NewListing, sid: str, lid: str) -> dict:
+    if n.category not in SELLER_CATEGORIES:
+        raise HTTPException(422, "دسته نامعتبر است")
+    url = (n.url or "").strip() or f'{catalog()["sellers"][sid]["website"]}/p/{lid}'
+    if not url.startswith("https://"):
+        raise HTTPException(422, "لینک محصول باید با https:// شروع شود")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return dict(id=lid, seller=sid, title=n.title.strip(), category=n.category, weight=n.weight.strip(),
+                price_toman=n.price_toman, available=n.available, url=url, created_at=now, updated_at=now)
+
+
+def _match_report(cat: dict, lid: str, preview: bool = False) -> dict:
+    """What the pipeline did with this listing, in words a seller understands."""
+    L = cat["listings"].get(lid)
+    if not L:
+        bad = next((r for r in cat["stats"]["rejected"] if r["id"] == lid), None)
+        return {"decision": "rejected", "text": "آگهی رد شد: " + "، ".join((bad or {}).get("problems", [])),
+                "understood": {}, "missing": []}
+    a, entry = L["attrs"], cat["log"][lid]
+    p = cat["products"].get(entry["product"])
+    understood = {}
+    if a["brand"]: understood["برند"] = kb.BRAND_FA.get(a["brand"], a["brand"])
+    if a["species"]: understood["حیوان"] = kb.FA_LABEL.get(a["species"], a["species"])
+    if a["type"]: understood["نوع"] = kb.FA_LABEL.get(a["type"], a["type"])
+    if a["stage"]: understood["سن"] = kb.FA_LABEL.get(a["stage"], a["stage"])
+    if a["amount"]: understood["وزن/حجم"] = pipeline.fmt_qty(a["amount"], a["unit"])
+    extra = [kb.FA_LABEL.get(t, t) for t in a["line"] + a["numbers"] + a["flavor"] + a["variant"] + a["size"]]
+    if extra: understood["ویژگی"] = "، ".join(dict.fromkeys(extra))
+    missing = [lbl for k, lbl in (("brand", "برند"), ("species", "گربه یا سگ"), ("type", "نوع محصول"), ("amount", "وزن یا حجم"))
+               if not a[k]]
+    d = entry["decision"]
+    name = p["name_fa"] if p else ""
+    rivals = len({o["seller_id"] for o in p["offers"] if o["seller_id"] != L["seller"]}) if p else 0
+    dup = bool(p) and d in ("auto", "approved") and any(o["seller_id"] == L["seller"] and o["listing_id"] != lid for o in p["offers"])
+    will = "وصل می‌شود و" if preview else "وصل شد و از همین حالا"
+    text = {
+        "auto": f"به محصول «{name}» {will} کنار {rivals} فروشگاه دیگر مقایسه می‌شود.",
+        "approved": f"با تأیید مدیر به «{name}» وصل شده است.",
+        "new": "محصول مشابهی در کاتالوگ نیست؛ به‌عنوان محصول جدید ساخته " + ("می‌شود." if preview else "شد و در جست‌وجو دیده می‌شود."),
+        "review": f"شبیه «{name}» است ولی مطمئن نیستیم ({'، '.join(entry['reasons'][:2]) or 'شباهت متوسط'}). "
+                  "به صف بررسی مدیر می‌رود و تا تأیید در مقایسه نمی‌آید.",
+    }[d]
+    return {"decision": d, "text": text, "product_id": p["id"] if p and d != "review" else None, "product_name": name,
+            "score": entry["score"], "understood": understood, "missing": missing,
+            "duplicate": "همین محصول را از فید فروشگاهتان هم داریم؛ دو پیشنهاد از یک فروشگاه کنار هم دیده می‌شود." if dup else None}
+
+
+@app.get("/api/v1/seller/listings")
+def seller_listings(user: dict = Depends(auth.require_role("seller"))):
+    sid = _active_seller(user)
+    cat = catalog()
+    mine = [r for r in pipeline.load_seller_listings() if r["seller"] == sid]
+    return {"categories": SELLER_CATEGORIES, "website": cat["sellers"][sid]["website"],
+            "items": [r | {"match": _match_report(cat, r["id"])} for r in reversed(mine)]}
+
+
+@app.post("/api/v1/seller/listings/preview")
+def seller_listing_preview(n: NewListing, user: dict = Depends(auth.require_role("seller"))):
+    """Dry run: the real pipeline on the catalog plus this one unsaved listing. Nothing is stored."""
+    sid = _active_seller(user)
+    rec = _listing_record(n, sid, "preview")
+    return _match_report(pipeline.build_catalog(extra=[rec]), "preview", preview=True)
+
+
+@app.post("/api/v1/seller/listings", status_code=201)
+def seller_listing_create(n: NewListing, user: dict = Depends(auth.require_role("seller"))):
+    sid = _active_seller(user)
+    with _lock:
+        items = pipeline.load_seller_listings()
+        if sum(r["seller"] == sid for r in items) >= 100:
+            raise HTTPException(429, "حداکثر ۱۰۰ محصول دستی؛ برای بیشتر، فید CSV یا API وصل کنید")
+        lid = f"man-{sid[:9]}-{secrets.token_hex(2)}"
+        rec = _listing_record(n, sid, lid)
+        pipeline.SELLER_LISTINGS.write_text(json.dumps(items + [rec], ensure_ascii=False, indent=1), "utf-8")
+    rebuild()
+    return rec | {"match": _match_report(catalog(), lid)}
+
+
+def _edit_own(lid: str, sid: str, fn):
+    with _lock:
+        items = pipeline.load_seller_listings()
+        rec = next((r for r in items if r["id"] == lid), None)
+        if not rec or rec["seller"] != sid:   # never touch another store's products
+            raise HTTPException(404, "محصول پیدا نشد")
+        items = fn(items, rec)
+        pipeline.SELLER_LISTINGS.write_text(json.dumps(items, ensure_ascii=False, indent=1), "utf-8")
+    rebuild()
+
+
+@app.patch("/api/v1/seller/listings/{lid}")
+def seller_listing_update(lid: str, patch: ListingPatch, user: dict = Depends(auth.require_role("seller"))):
+    def apply(items, rec):
+        if patch.price_toman is not None:
+            rec["price_toman"] = patch.price_toman
+        if patch.available is not None:
+            rec["available"] = patch.available
+        rec["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")   # the price is fresh again
+        return items
+    _edit_own(lid, _active_seller(user), apply)
+    return {"ok": True, "match": _match_report(catalog(), lid)}
+
+
+@app.delete("/api/v1/seller/listings/{lid}")
+def seller_listing_delete(lid: str, user: dict = Depends(auth.require_role("seller"))):
+    _edit_own(lid, _active_seller(user), lambda items, rec: [r for r in items if r["id"] != lid])
+    return {"ok": True}
 
 
 # ------------------------------------------------------------------ admin API (server-side access control)
@@ -552,8 +703,10 @@ def decide(d: Decision):
 
 @app.post("/api/v1/admin/reset", dependencies=[Depends(require_admin)])
 def reset():
-    if pipeline.DECISIONS.exists():
-        pipeline.DECISIONS.unlink()
+    """Back to the recorded demo state: no human decisions, no hand-added seller products."""
+    for f in (pipeline.DECISIONS, pipeline.SELLER_LISTINGS):
+        if f.exists():
+            f.unlink()
     rebuild()
     return {"ok": True}
 

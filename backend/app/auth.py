@@ -126,11 +126,25 @@ def verify_otp(phone: str, code: str) -> dict:
                 "status": "pending" if s["role"] == "seller" else "active",
                 "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         _save_user(user)
-    user = get_user(phone)
+    return _new_session(phone)
+
+
+def _new_session(phone: str) -> dict:
     token = secrets.token_urlsafe(32)
     with _lock:
         _sessions[token] = {"phone": phone, "exp": time.time() + SESSION_TTL}
-    return {"token": token, "user": public_user(user)}
+    return {"token": token, "user": public_user(get_user(phone))}
+
+
+def demo_login(phone: str) -> dict:
+    """Demo mode only: open a session for one of the fixed demo accounts without an OTP, so the
+    seller and admin panels can be explored with one click. Real or self-registered accounts
+    always need the code, and with PETMATCH_DEMO_OTP=0 this endpoint does not exist."""
+    if not DEMO_MODE:
+        raise HTTPException(404, "not found")
+    if phone not in {u["phone"] for u in DEMO_ACCOUNTS}:
+        raise HTTPException(403, "فقط حساب‌های نمایشی بدون کد وارد می‌شوند")
+    return _new_session(phone)
 
 
 def logout(token: str | None):

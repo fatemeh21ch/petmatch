@@ -23,6 +23,7 @@ from .text import extract, normalize
 DATA = Path(__file__).resolve().parents[1] / "data"
 RAW = DATA / "raw"
 DECISIONS = DATA / "decisions.json"
+SELLER_LISTINGS = DATA / "seller_listings.json"   # products sellers add by hand in their panel
 
 AUTO_MERGE = 0.95
 REVIEW = 0.75
@@ -45,7 +46,18 @@ def _read_csv(name):
         return list(csv.DictReader(f))
 
 
-def _ingest():
+def load_seller_listings() -> list:
+    return json.loads(SELLER_LISTINGS.read_text("utf-8")) if SELLER_LISTINGS.exists() else []
+
+
+def manual_listing(r: dict) -> dict:
+    """A product a seller typed into the panel: just another feed, same shape, same matching."""
+    return dict(id=r["id"], seller=r["seller"], title=r["title"], extra=f'{r.get("weight", "")} {r.get("category", "")}'.strip(),
+                price=int(r["price_toman"]), available=bool(r["available"]), url=r["url"], checked=r["updated_at"],
+                raw=r, manual=True)
+
+
+def _ingest(extra=None):
     """One adapter per store: each speaks its own format, all emit the same shape."""
     out = []
     for r in _read_csv("petkade.csv"):
@@ -75,6 +87,7 @@ def _ingest():
         mult = 1000 if "هزار" in r["price"] else 1
         out.append(dict(id=r["ref"], seller="pashmaloo", title=r["title"], extra="", price=_digits(r["price"]) * mult,
                         available=r["stock"] == "yes", url=r["url"], checked=r["updated"], raw=r))
+    out += [manual_listing(r) for r in load_seller_listings() + list(extra or [])]
     return out
 
 
@@ -242,11 +255,12 @@ def fmt_qty(amount, unit):
     return f"{amount / 1000:g} کیلوگرم" if amount >= 1000 else f"{amount} گرم"
 
 
-def build_catalog():
+def build_catalog(extra=None):
+    """`extra`: unsaved seller listings for a dry run (the add-product preview)."""
     sellers = {s["id"]: s for s in json.loads((RAW / "sellers.json").read_text("utf-8"))}
     history = json.loads((DATA / "price_history.json").read_text("utf-8"))
 
-    raw = _ingest()
+    raw = _ingest(extra)
     listings, rejected = [], []
     for L in raw:
         problems = _validate(L)

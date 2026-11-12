@@ -214,3 +214,46 @@ def test_outbound_click_is_counted_and_opens_demo_store():
     assert c.get("/api/v1/seller/dashboard").json()["kpis"]["clicks_today"] == before + 1
     page = c.get(f"/api/v1/store/petkade/{lid}").json()
     assert page["seller"]["id"] == "petkade" and page["listing"]["id"] == lid
+
+
+def test_demo_login_without_otp_only_for_demo_accounts():
+    c = _fresh()
+    r = c.post("/api/v1/auth/demo-login", json={"phone": "09120000002"})
+    assert r.status_code == 200 and r.json()["user"]["role"] == "seller"
+    assert c.get("/api/v1/seller/dashboard").status_code == 200
+    assert _fresh().post("/api/v1/auth/demo-login", json={"phone": "09129999999"}).status_code == 403
+
+
+def test_seller_adds_product_it_is_matched_and_only_owner_can_edit():
+    from app import pipeline
+    backup = pipeline.SELLER_LISTINGS.read_text("utf-8") if pipeline.SELLER_LISTINGS.exists() else None
+    try:
+        c = _fresh()
+        c.post("/api/v1/auth/demo-login", json={"phone": "09120000005"})        # panjetala
+        body = {"title": "غذای خشک گربه رویال کنین ایندور ۲۷", "category": "غذای خشک گربه", "weight": "۲ کیلو",
+                "price_toman": 3_400_000}
+        pre = c.post("/api/v1/seller/listings/preview", json=body).json()
+        assert pre["understood"]["برند"] and not pre["missing"]
+        assert not any(r["id"] == "preview" for r in pipeline.load_seller_listings())   # dry run stores nothing
+        r = c.post("/api/v1/seller/listings", json=body)
+        assert r.status_code == 201, r.text
+        lid, m = r.json()["id"], r.json()["match"]
+        assert m["decision"] == pre["decision"] and m["decision"] in ("auto", "new", "review")
+        row = next(x for x in c.get("/api/v1/seller/dashboard").json()["listings"] if x["listing_id"] == lid)
+        assert row["manual"]
+        assert c.post("/api/v1/seller/listings", json=body | {"category": "خاک سگ"}).status_code == 422
+        assert c.post("/api/v1/seller/listings", json=body | {"price_toman": 5}).status_code == 422
+        other = _fresh()
+        other.post("/api/v1/auth/demo-login", json={"phone": "09120000002"})    # petkade
+        assert other.patch(f"/api/v1/seller/listings/{lid}", json={"price_toman": 2000}).status_code == 404
+        assert other.delete(f"/api/v1/seller/listings/{lid}").status_code == 404
+        assert c.patch(f"/api/v1/seller/listings/{lid}", json={"available": False}).status_code == 200
+        assert c.delete(f"/api/v1/seller/listings/{lid}").status_code == 200
+        assert c.get("/api/v1/seller/listings").json()["items"] == [] or all(i["id"] != lid for i in c.get("/api/v1/seller/listings").json()["items"])
+    finally:
+        if backup is None:
+            pipeline.SELLER_LISTINGS.unlink(missing_ok=True)
+        else:
+            pipeline.SELLER_LISTINGS.write_text(backup, "utf-8")
+        from app import main
+        main.rebuild()

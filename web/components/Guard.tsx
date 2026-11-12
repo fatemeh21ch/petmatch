@@ -1,15 +1,42 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/lib/client";
+import { useEffect, useRef, useState } from "react";
+import { api } from "@/lib/api";
 import { catArt } from "@/lib/art";
+import { useAuth } from "@/lib/client";
 import { Empty } from "./ui";
 
-/** UI convenience only: the API checks the role on every request anyway (hiding a page is not security). */
+/** UI convenience only: the API checks the role on every request anyway (hiding a page is not security).
+ *
+ * Demo mode: nobody has to log in to look around. Opening /seller or /admin without a session
+ * signs in as the matching demo account (no OTP); a wrong-role session gets a one-click switch.
+ * With PETMATCH_DEMO_OTP=0 the server exposes no demo accounts and the normal login is required. */
 export default function Guard({ role, children }: { role: "seller" | "admin"; children: React.ReactNode }) {
-  const { user, ready } = useAuth();
+  const { user, ready, refresh } = useAuth();
   const path = usePathname();
-  if (!ready) return <div className="skeleton" style={{ height: 300, marginTop: 24 }} />;
+  const [demo, setDemo] = useState<any[] | null>(null);
+  const tried = useRef(false);
+  const [failed, setFailed] = useState(false);
+  const candidates = (demo || []).filter((a) => a.role === role);
+
+  useEffect(() => {
+    const load = () => api<any[]>("/api/v1/auth/demo-accounts");
+    // one retry: right after the backend (re)starts the proxy briefly answers 500
+    load().catch(() => new Promise((r) => setTimeout(r, 1500)).then(load)).then(setDemo).catch(() => setDemo([]));
+  }, []);
+  const enter = async (phone: string) => {
+    await api("/api/v1/auth/demo-login", { method: "POST", json: { phone } });
+    await refresh();
+  };
+  useEffect(() => {
+    if (!ready || user || !demo || tried.current || !candidates.length) return;
+    tried.current = true;
+    enter(candidates[0].phone).catch(() => setFailed(true));
+  }, [ready, user, demo]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const autoEntering = !user && (demo === null || (candidates.length > 0 && !failed));
+  if (!ready || autoEntering) return <div className="skeleton" style={{ height: 300, marginTop: 24 }} />;
   if (!user) return (
     <Empty art={catArt({ glasses: true })}>
       <p>برای دیدن این صفحه وارد شو.</p>
@@ -19,7 +46,12 @@ export default function Guard({ role, children }: { role: "seller" | "admin"; ch
   if (user.role !== role) return (
     <Empty art={catArt()}>
       <p>این بخش مخصوص {role === "admin" ? "مدیر سامانه" : "فروشندگان"} است و حساب شما ({user.role_fa}) به آن دسترسی ندارد.</p>
-      <Link className="btn btn-ghost" href="/login">ورود با حساب دیگر</Link>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+        {candidates.map((a) => (
+          <button key={a.phone} className="btn btn-primary" onClick={() => enter(a.phone)}>ادامه با حساب نمایشی {a.name}</button>
+        ))}
+        <Link className="btn btn-ghost" href={`/login?next=${encodeURIComponent(path)}`}>ورود با حساب دیگر</Link>
+      </div>
     </Empty>
   );
   return <>{children}</>;
