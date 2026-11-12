@@ -481,8 +481,17 @@ class NewListing(BaseModel):
 
 
 class ListingPatch(BaseModel):
+    title: str | None = Field(None, min_length=5, max_length=120)
+    category: str | None = Field(None, max_length=30)
+    weight: str | None = Field(None, max_length=30)
     price_toman: int | None = Field(None, ge=1000, le=500_000_000)
     available: bool | None = None
+    url: str | None = Field(None, max_length=200)
+    hidden: bool | None = None   # feed products: hide from PetMatch / restore
+
+
+class Preview(NewListing):
+    replaces: str | None = Field(None, max_length=20)   # editing: leave the old version out of the dry run
 
 
 def _active_seller(user: dict) -> str:
@@ -539,21 +548,48 @@ def _match_report(cat: dict, lid: str, preview: bool = False) -> dict:
             "duplicate": "همین محصول را از فید فروشگاهتان هم داریم؛ دو پیشنهاد از یک فروشگاه کنار هم دیده می‌شود." if dup else None}
 
 
+def _now():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _own_listing(cat: dict, lid: str, sid: str) -> dict:
+    L = cat["listings"].get(lid) or next((h for h in cat["hidden"] if h["id"] == lid), None)
+    if not L or L["seller"] != sid:   # never touch another store's products
+        raise HTTPException(404, "محصول پیدا نشد")
+    return L
+
+
+def _item(cat: dict, L: dict) -> dict:
+    """One row of the seller's product table: feed products and hand-added ones alike."""
+    manual, hidden = bool(L.get("manual")), bool(L.get("hidden"))
+    r = L["raw"]
+    return dict(id=L["id"], source="manual" if manual else "feed", title=L["title"],
+                category=r.get("category") if manual else None, weight=r.get("weight") if manual else None,
+                price_toman=int(L["price"]), available=bool(L["available"]), url=L["url"], updated_at=L["checked"],
+                edited=bool(L.get("edited")), hidden=hidden, match=None if hidden else _match_report(cat, L["id"]))
+
+
 @app.get("/api/v1/seller/listings")
 def seller_listings(user: dict = Depends(auth.require_role("seller"))):
     sid = _active_seller(user)
     cat = catalog()
-    mine = [r for r in pipeline.load_seller_listings() if r["seller"] == sid]
+    mine = [L for L in cat["listings"].values() if L["seller"] == sid] + [h for h in cat["hidden"] if h["seller"] == sid]
+    order = {r["id"]: i for i, r in enumerate(pipeline.load_seller_listings())}
+    # newest hand-added first, then the feed alphabetically, removed ones last
+    mine.sort(key=lambda L: (bool(L.get("hidden")), not L.get("manual"), -order.get(L["id"], 0), L["title"]))
     return {"categories": SELLER_CATEGORIES, "website": cat["sellers"][sid]["website"],
-            "items": [r | {"match": _match_report(cat, r["id"])} for r in reversed(mine)]}
+            "feed_format": cat["sellers"][sid]["format"], "items": [_item(cat, L) for L in mine]}
 
 
 @app.post("/api/v1/seller/listings/preview")
-def seller_listing_preview(n: NewListing, user: dict = Depends(auth.require_role("seller"))):
+def seller_listing_preview(n: Preview, user: dict = Depends(auth.require_role("seller"))):
     """Dry run: the real pipeline on the catalog plus this one unsaved listing. Nothing is stored."""
     sid = _active_seller(user)
+    if n.replaces:
+        _own_listing(catalog(), n.replaces, sid)
     rec = _listing_record(n, sid, "preview")
-    return _match_report(pipeline.build_catalog(extra=[rec]), "preview", preview=True)
+    dry = pipeline.build_catalog(extra=[rec], exclude=(n.replaces,) if n.replaces else ())
+    return _match_report(dry, "preview", preview=True)
 
 
 @app.post("/api/v1/seller/listings", status_code=201)
@@ -567,37 +603,63 @@ def seller_listing_create(n: NewListing, user: dict = Depends(auth.require_role(
         rec = _listing_record(n, sid, lid)
         pipeline.SELLER_LISTINGS.write_text(json.dumps(items + [rec], ensure_ascii=False, indent=1), "utf-8")
     rebuild()
-    return rec | {"match": _match_report(catalog(), lid)}
-
-
-def _edit_own(lid: str, sid: str, fn):
-    with _lock:
-        items = pipeline.load_seller_listings()
-        rec = next((r for r in items if r["id"] == lid), None)
-        if not rec or rec["seller"] != sid:   # never touch another store's products
-            raise HTTPException(404, "محصول پیدا نشد")
-        items = fn(items, rec)
-        pipeline.SELLER_LISTINGS.write_text(json.dumps(items, ensure_ascii=False, indent=1), "utf-8")
-    rebuild()
+    return _item(catalog(), catalog()["listings"][lid])
 
 
 @app.patch("/api/v1/seller/listings/{lid}")
 def seller_listing_update(lid: str, patch: ListingPatch, user: dict = Depends(auth.require_role("seller"))):
-    def apply(items, rec):
-        if patch.price_toman is not None:
-            rec["price_toman"] = patch.price_toman
-        if patch.available is not None:
-            rec["available"] = patch.available
-        rec["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")   # the price is fresh again
-        return items
-    _edit_own(lid, _active_seller(user), apply)
-    return {"ok": True, "match": _match_report(catalog(), lid)}
+    """Hand-added products: every field. Feed products: title, price and stock, stored as an override
+    on top of the feed (in production the next feed sync would win), plus hide / restore."""
+    sid = _active_seller(user)
+    L = _own_listing(catalog(), lid, sid)
+    changes = patch.model_dump(exclude_none=True)
+    if not changes:
+        raise HTTPException(422, "تغییری فرستاده نشد")
+    if "title" in changes:
+        changes["title"] = changes["title"].strip()
+    with _lock:
+        if L.get("manual"):
+            if "hidden" in changes:
+                raise HTTPException(422, "محصول دستی را حذف کنید، نه پنهان")
+            items = pipeline.load_seller_listings()
+            rec = next(r for r in items if r["id"] == lid)
+            for k in ("title", "category", "weight", "price_toman", "available", "url"):
+                if k in changes:
+                    rec[k] = changes[k]
+            if rec["category"] not in SELLER_CATEGORIES:
+                raise HTTPException(422, "دسته نامعتبر است")
+            if not rec["url"].startswith("https://"):
+                raise HTTPException(422, "لینک محصول باید با https:// شروع شود")
+            rec["updated_at"] = _now()   # the price is fresh again
+            pipeline.SELLER_LISTINGS.write_text(json.dumps(items, ensure_ascii=False, indent=1), "utf-8")
+        else:
+            if {"category", "weight", "url"} & changes.keys():
+                raise HTTPException(422, "برای محصولات فید فقط عنوان، قیمت و موجودی قابل ویرایش است")
+            ov = pipeline.load_overrides()
+            o = ov.get(lid, {})
+            o.update({"price" if k == "price_toman" else k: v for k, v in changes.items()})
+            o["updated_at"] = _now()
+            ov[lid] = o
+            pipeline.SELLER_OVERRIDES.write_text(json.dumps(ov, ensure_ascii=False, indent=1), "utf-8")
+    rebuild()
+    return _item(catalog(), _own_listing(catalog(), lid, sid))
 
 
 @app.delete("/api/v1/seller/listings/{lid}")
 def seller_listing_delete(lid: str, user: dict = Depends(auth.require_role("seller"))):
-    _edit_own(lid, _active_seller(user), lambda items, rec: [r for r in items if r["id"] != lid])
-    return {"ok": True}
+    """Hand-added: deleted. Feed product: hidden from PetMatch (restorable), since the feed still sends it."""
+    sid = _active_seller(user)
+    L = _own_listing(catalog(), lid, sid)
+    with _lock:
+        if L.get("manual"):
+            items = [r for r in pipeline.load_seller_listings() if r["id"] != lid]
+            pipeline.SELLER_LISTINGS.write_text(json.dumps(items, ensure_ascii=False, indent=1), "utf-8")
+        else:
+            ov = pipeline.load_overrides()
+            ov[lid] = ov.get(lid, {}) | {"hidden": True, "updated_at": _now()}
+            pipeline.SELLER_OVERRIDES.write_text(json.dumps(ov, ensure_ascii=False, indent=1), "utf-8")
+    rebuild()
+    return {"ok": True, "hidden": not L.get("manual")}
 
 
 # ------------------------------------------------------------------ admin API (server-side access control)
@@ -703,8 +765,8 @@ def decide(d: Decision):
 
 @app.post("/api/v1/admin/reset", dependencies=[Depends(require_admin)])
 def reset():
-    """Back to the recorded demo state: no human decisions, no hand-added seller products."""
-    for f in (pipeline.DECISIONS, pipeline.SELLER_LISTINGS):
+    """Back to the recorded demo state: no human decisions, no seller-added or seller-edited products."""
+    for f in (pipeline.DECISIONS, pipeline.SELLER_LISTINGS, pipeline.SELLER_OVERRIDES):
         if f.exists():
             f.unlink()
     rebuild()

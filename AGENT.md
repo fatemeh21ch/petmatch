@@ -15,7 +15,7 @@ matches identical products and ranks "best buy" (not just cheapest). UI is **Per
 | Backend (FastAPI) | `python -m uvicorn app.main:app --app-dir backend --port 8000` (no auto-reload: restart after Python edits) | 8000 |
 | Frontend (Next.js 16) | `npm --prefix web run dev` | 3000 |
 | Seed data (first time only) | `python backend/seed/generate.py` | — |
-| Backend tests | `cd backend && python -m pytest -q tests` (36 tests) | — |
+| Backend tests | `cd backend && python -m pytest -q tests` (37 tests) | — |
 | Frontend typecheck | `cd web && npx tsc --noEmit` (if it complains about `.next/types`, delete `web/.next/types` and `web/.next/dev/types`) | — |
 
 `.claude/launch.json` has both servers as `petmatch` and `petmatch-web`. The browser only talks to
@@ -25,7 +25,7 @@ matches identical products and ranks "best buy" (not just cheapest). UI is **Per
 | File | Responsibility |
 |---|---|
 | `main.py` | **All HTTP endpoints** (public, auth, seller, admin). `catalog()` = in-memory catalog; `rebuild()` re-runs the pipeline |
-| `pipeline.py` | Feeds → validate → `text.extract` → `match()` → catalog (products with offers, unit price, anomalies, stale flags). One adapter per shop in `_ingest()`; seller hand-added products (`data/seller_listings.json`) are just one more feed. `build_catalog(extra=[...])` = dry run |
+| `pipeline.py` | Feeds → validate → `text.extract` → `match()` → catalog (products with offers, unit price, anomalies, stale flags). One adapter per shop in `_ingest()`; seller hand-added products (`data/seller_listings.json`) are just one more feed; seller edits of feed products (`data/seller_overrides.json`: title/price/stock/hidden) are applied on top in `_apply_overrides`. `build_catalog(extra=[...], exclude=[...])` = dry run; hidden listings end up in `cat["hidden"]` |
 | `text.py` | Persian/English normalisation (ي/ك, digits, ZWNJ), quantity parsing, attribute extraction |
 | `kb.py` | Vocabulary: brands, species, types, stages, flavours, `FA_LABEL`, `BRAND_FA` |
 | `search.py` | Query → `Intent` (rules), pet-profile constraints, filter, `rank()` (ValueScore), explanation facts |
@@ -36,19 +36,19 @@ matches identical products and ranks "best buy" (not just cheapest). UI is **Per
 
 Key endpoints (`/api/v1/...`): `search`, `explain`, `home`, `nav`, `products/{id}`, `reports`, `go/{listing}`
 (counted outbound click), `store/{seller}/{listing}`, `auth/{otp/request,otp/verify,signup,me,logout,demo-accounts,demo-login}`,
-`seller/dashboard`, `seller/listings` (GET list · POST create · `/preview` dry run · PATCH/DELETE `/{id}`),
+`seller/dashboard`, `seller/listings` (GET all of the seller's products, feed + manual + hidden · POST create · `/preview` dry run, `replaces` when editing · PATCH `/{id}` edit, `{hidden:false}` restores · DELETE `/{id}`: manual = delete, feed = hide),
 `admin/{analytics,pipeline,decisions,reset}`.
 
 Data: `backend/data/raw/*` feeds (committed), `ground_truth.json` (matching labels), runtime files
-**gitignored**: `users.json`, `events.json`, `search_log.json`, `decisions.json`, `reports.json`, `seller_listings.json`.
-`POST admin/reset` deletes `decisions.json` and `seller_listings.json`.
+**gitignored**: `users.json`, `events.json`, `search_log.json`, `decisions.json`, `reports.json`, `seller_listings.json`, `seller_overrides.json`.
+`POST admin/reset` deletes `decisions.json`, `seller_listings.json` and `seller_overrides.json`.
 
 ## Frontend — `web/`
 | Path | What |
 |---|---|
 | `app/layout.tsx` | Root: font, `AuthProvider`, `Toaster` |
 | `app/(site)/` | Shop pages **with** the shop header (search bar, category menus, my pet, favorites) + footer: home, `search`, `p/[id]`, `pet`, `favorites`, `guide/[id]`, `login`, `signup` |
-| `app/(panel)/` | Work panels with their **own** slim header (`components/PanelHeader.tsx`), no shop search/menus: `seller` (dashboard), `seller/products` (add/edit products), `admin` |
+| `app/(panel)/` | Work panels with their **own** slim header (`components/PanelHeader.tsx`), no shop search/menus: `seller` (dashboard), `seller/products` (add, edit, delete/restore all the seller's products; `?edit=<listing_id>` opens one for editing), `admin` |
 | `app/store/[seller]/[listing]` | Fake shop page after a "buy" click (deliberately outside both layouts) |
 | `components/` | `Header` (shop), `PanelHeader` (panels, demo account switch), `Guard` (role gate + auto demo login), `ProductView`, `Charts` (SVG), `Otp`, `ui` (`Svg`, `Ui` icons, `Stars`, `Empty`, …) |
 | `lib/api.ts` | `api()` (browser, same-origin) and `serverApi()` (server components → :8000) |

@@ -257,3 +257,34 @@ def test_seller_adds_product_it_is_matched_and_only_owner_can_edit():
             pipeline.SELLER_LISTINGS.write_text(backup, "utf-8")
         from app import main
         main.rebuild()
+
+
+def test_seller_edits_and_hides_feed_product_then_restores():
+    from app import main, pipeline
+    backup = pipeline.SELLER_OVERRIDES.read_text("utf-8") if pipeline.SELLER_OVERRIDES.exists() else None
+    try:
+        c = _fresh()
+        c.post("/api/v1/auth/demo-login", json={"phone": "09120000002"})        # petkade
+        items = c.get("/api/v1/seller/listings").json()["items"]
+        feed = next(i for i in items if i["source"] == "feed" and i["match"]["product_id"])
+        lid, pid = feed["id"], feed["match"]["product_id"]
+        r = c.patch(f"/api/v1/seller/listings/{lid}", json={"price_toman": 1_234_000, "available": False})
+        assert r.status_code == 200 and r.json()["price_toman"] == 1_234_000 and r.json()["edited"]
+        offer = next(o for o in c.get(f"/api/v1/products/{pid}").json()["offers"] if o["listing_id"] == lid)
+        assert offer["price"] == 1_234_000 and not offer["available"] and not offer["stale"]
+        assert c.patch(f"/api/v1/seller/listings/{lid}", json={"weight": "2kg"}).status_code == 422   # feed: no weight edit
+        other = _fresh()
+        other.post("/api/v1/auth/demo-login", json={"phone": "09120000005"})
+        assert other.patch(f"/api/v1/seller/listings/{lid}", json={"price_toman": 2000}).status_code == 404
+        assert other.delete(f"/api/v1/seller/listings/{lid}").status_code == 404
+        assert c.delete(f"/api/v1/seller/listings/{lid}").json()["hidden"] is True
+        assert all(o["listing_id"] != lid for o in (c.get(f"/api/v1/products/{pid}").json().get("offers") or []))
+        assert next(i for i in c.get("/api/v1/seller/listings").json()["items"] if i["id"] == lid)["hidden"]
+        assert c.patch(f"/api/v1/seller/listings/{lid}", json={"hidden": False}).status_code == 200
+        assert any(o["listing_id"] == lid for o in c.get(f"/api/v1/products/{pid}").json()["offers"])
+    finally:
+        if backup is None:
+            pipeline.SELLER_OVERRIDES.unlink(missing_ok=True)
+        else:
+            pipeline.SELLER_OVERRIDES.write_text(backup, "utf-8")
+        main.rebuild()

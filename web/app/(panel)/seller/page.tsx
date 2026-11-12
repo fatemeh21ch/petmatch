@@ -80,7 +80,7 @@ function Dashboard() {
           <div className="sortbar" style={{ margin: 0 }}>{([["clicks", "کلیک"], ["views", "بازدید"], ["gap", "فاصله با ارزان‌ترین"]] as const).map(([k2, l]) => (
             <button key={k2} className="sort" aria-pressed={sort === k2} onClick={() => setSort(k2)}>{l}</button>))}</div></div>
         <div className="table-wrap"><table>
-          <thead><tr><th>محصول</th><th>قیمت نهایی</th><th>جایگاه</th><th>ارزان‌ترین رقیب</th><th>بازدید</th><th>کلیک</th><th>CTR</th><th>وضعیت</th></tr></thead>
+          <thead><tr><th>محصول</th><th>قیمت نهایی</th><th>جایگاه</th><th>ارزان‌ترین رقیب</th><th>بازدید</th><th>کلیک</th><th>CTR</th><th>وضعیت</th><th></th></tr></thead>
           <tbody>{rows.map((r: any) => (
             <tr key={r.listing_id}>
               <td style={{ minWidth: 260 }}>{r.product_id ? <Link href={`/p/${r.product_id}`} style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -90,6 +90,7 @@ function Dashboard() {
               <td>{r.best_rival ? <>{r.best_rival.seller}<br /><small className={r.gap_pct > 0 ? "fit no" : "fit ok"}>{r.gap_pct > 0 ? `شما ${fa(r.gap_pct)}٪ گران‌تر` : r.gap_pct < 0 ? `شما ${fa(Math.abs(r.gap_pct))}٪ ارزان‌تر` : "هم‌قیمت"}</small></> : <span className="muted">رقیبی ندارد</span>}</td>
               <td>{fa(r.views)}</td><td><b>{fa(r.clicks)}</b></td><td>{fa(r.ctr)}٪</td>
               <td>{r.anomaly ? <span className="pill bad">قیمت مشکوک</span> : r.stale ? <span className="pill warn">قیمت قدیمی</span> : !r.available ? <span className="pill">ناموجود</span> : <span className="pill good">فعال</span>}</td>
+              <td><Link className="btn btn-ghost btn-sm" href={`/seller/products?edit=${r.listing_id}`}>ویرایش</Link></td>
             </tr>
           ))}</tbody>
         </table></div>

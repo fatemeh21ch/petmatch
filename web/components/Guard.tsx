@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { catArt } from "@/lib/art";
 import { useAuth } from "@/lib/client";
@@ -20,13 +20,19 @@ export default function Guard({ role, children }: { role: "seller" | "admin"; ch
   const [failed, setFailed] = useState(false);
   const candidates = (demo || []).filter((a) => a.role === role);
 
-  useEffect(() => {
-    const load = () => api<any[]>("/api/v1/auth/demo-accounts");
-    // one retry: right after the backend (re)starts the proxy briefly answers 500
-    load().catch(() => new Promise((r) => setTimeout(r, 1500)).then(load)).then(setDemo).catch(() => setDemo([]));
-  }, []);
+  // While the backend (re)starts it is busy building the catalog and the proxy answers 500: keep retrying ~10s.
+  const retry = async <T,>(fn: () => Promise<T>, tries = 8): Promise<T> => {
+    for (let i = 0; ; i++) {
+      try { return await fn(); } catch (e) { if (i >= tries) throw e; await new Promise((r) => setTimeout(r, 1200)); }
+    }
+  };
+  const loadDemo = useCallback(() => {
+    setDemo(null); setFailed(false); tried.current = false;
+    retry(() => api<any[]>("/api/v1/auth/demo-accounts")).then(setDemo).catch(() => setDemo([]));
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadDemo(); }, [loadDemo]);
   const enter = async (phone: string) => {
-    await api("/api/v1/auth/demo-login", { method: "POST", json: { phone } });
+    await retry(() => api("/api/v1/auth/demo-login", { method: "POST", json: { phone } }), 4);
     await refresh();
   };
   useEffect(() => {
@@ -40,7 +46,10 @@ export default function Guard({ role, children }: { role: "seller" | "admin"; ch
   if (!user) return (
     <Empty art={catArt({ glasses: true })}>
       <p>برای دیدن این صفحه وارد شو.</p>
-      <Link className="btn btn-primary" href={`/login?next=${encodeURIComponent(path)}`}>ورود با کد یک‌بارمصرف</Link>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+        <Link className="btn btn-primary" href={`/login?next=${encodeURIComponent(path)}`}>ورود با کد یک‌بارمصرف</Link>
+        <button className="btn btn-ghost" onClick={() => { refresh(); loadDemo(); }}>تلاش دوباره (ورود نمایشی)</button>
+      </div>
     </Empty>
   );
   if (user.role !== role) return (
