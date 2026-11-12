@@ -1,4 +1,5 @@
 import json
+import re
 import statistics
 import threading
 from datetime import datetime, timezone
@@ -203,7 +204,7 @@ def home():
                 brands=[dict(key=k, fa=kb.BRAND_FA[k], en=kb.BRANDS[k], count=n) for k, n in sorted(brands.items(), key=lambda x: -x[1])],
                 categories=[dict(species=s, type=t, label=f"{kb.FA_LABEL[t]} {kb.FA_LABEL[s]}", count=n)
                             for (s, t), n in sorted(counts.items(), key=lambda x: -x[1])],
-                deals=rows, stats=dict(products=len(products), sellers=len(cat["sellers"]),
+                deals=rows, stats=dict(products=len(products), sellers=sum(s["status"] == "active" for s in cat["sellers"].values()),
                                        offers=sum(len(p["offers"]) for p in products)),
                 ai_available=ai.available())
 
@@ -286,6 +287,33 @@ def report(r: Report):
     items.append(dict(listing_id=r.listing_id, reason=r.reason, at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
     path.write_text(json.dumps(items[-500:], ensure_ascii=False, indent=1), "utf-8")
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ product comparison (buyer)
+@app.get("/api/v1/compare")
+def compare(ids: str = Query(..., max_length=200), pet: str | None = Query(None, max_length=500)):
+    """Side by side for up to 4 products, scored the same way as search (ValueScore, fit for the pet)."""
+    wanted = list(dict.fromkeys(i for i in ids.split(",") if i))[:4]
+    prods = catalog()["products"]
+    found = [prods[i] for i in wanted if i in prods]
+    pet_d = pet_from_query(pet)
+    it = Intent()
+    prefs = apply_profile(it, pet_d)
+    rows = {r["product"]["id"]: r for r in rank(found, it, prefs, pet_d)}
+    out = []
+    for pid in wanted:
+        if pid not in rows:
+            continue
+        r, p = rows[pid], rows[pid]["product"]
+        live = [o for o in p["offers"] if o["available"] and not o["anomaly"]]
+        out.append(card(r) | {
+            "stage": p["stage"], "attributes": [kb.FA_LABEL.get(x, x) for x in [*p["size"], *p["flavor"], *p["variant"], *p["line"]] if x]
+                                               + (["بدون غلات"] if p["grain_free"] else []),
+            "stage_fa": kb.FA_LABEL.get(p["stage"]) if p["stage"] else None,
+            "type_fa": kb.FA_LABEL.get(p["type"]), "species_fa": kb.FA_LABEL.get(p["species"]),
+            "price_range": [min(o["total"] for o in live), max(o["total"] for o in live)] if live else None,
+        })
+    return {"items": out, "missing": [i for i in wanted if i not in prods], "pet_used": bool(pet_d)}
 
 
 # ------------------------------------------------------------------ auth (phone + OTP)
@@ -413,6 +441,10 @@ def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
         return {"status": "pending", "user": auth.public_user(user),
                 "message": "حساب فروشنده شما ثبت شد و پس از بررسی هویت کسب‌وکار، فید محصولات به فروشگاهتان وصل می‌شود."}
     seller = cat["sellers"][sid]
+    if seller["status"] == "blocked":
+        return {"status": "blocked", "user": auth.public_user(user), "seller": seller,
+                "message": "فروشگاه شما توسط مدیر پت‌مچ مسدود شده و محصولاتش در مقایسه قیمت نمایش داده نمی‌شود."
+                           + (f" دلیل: {seller['blocked']['reason']}" if seller["blocked"].get("reason") else "")}
     mine = [L for L in cat["listings"].values() if L["seller"] == sid]
     ids = [L["id"] for L in mine]
     series = analytics.daily_series(ids, 30)
@@ -476,7 +508,7 @@ def admin_analytics():
     for s in cat["sellers"].values():
         mine = [o for o in offers if o["seller_id"] == s["id"]]
         clicks = sum(totals.get(o["listing_id"], [0, 0])[1] for o in mine)
-        per_seller[s["id"]] = {"name": s["name"], "color": s.get("color", "#13566c"), "listings": len(mine),
+        per_seller[s["id"]] = {"name": s["name"], "status": s["status"], "color": s.get("color", "#13566c"), "listings": len(mine),
                                "in_stock": sum(o["available"] for o in mine), "stale": sum(o["stale"] for o in mine),
                                "anomalies": sum(bool(o["anomaly"]) for o in mine), "clicks": clicks, "rating": s["rating"]}
     ages = [o["age_hours"] for o in offers]
@@ -500,6 +532,97 @@ def admin_analytics():
         "offers": {"total": len(offers), "in_stock": sum(o["available"] for o in offers),
                    "anomalies": sum(bool(o["anomaly"]) for o in offers), "stale": sum(o["stale"] for o in offers)},
     }
+
+
+# ------------------------------------------------------------------ admin: stores (add / block / unblock)
+# Products still come only from feeds: adding a store registers it (and can activate a waiting seller
+# account); its products appear once its feed is connected. Blocking removes every offer of the store.
+class NewStore(BaseModel):
+    name: str = Field(min_length=2, max_length=40)
+    website: str = Field(max_length=80)
+    shipping_flat: int = Field(0, ge=0, le=5_000_000)
+    free_over: int = Field(0, ge=0, le=100_000_000)
+    color: str = Field("#13566c", pattern=r"^#[0-9a-fA-F]{6}$")
+    owner_phone: str | None = Field(None, max_length=20)   # a seller account waiting for approval
+
+
+class BlockStore(BaseModel):
+    reason: str = Field("", max_length=120)
+
+
+def _store_id(website: str, taken) -> str:
+    host = re.sub(r"^https://(www\.)?", "", website).split("/")[0].split(".")[0].lower()
+    base = re.sub(r"[^a-z0-9]", "", host)[:12] or "store"
+    sid, n = base, 2
+    while sid in taken:
+        sid, n = f"{base}{n}", n + 1
+    return sid
+
+
+@app.get("/api/v1/admin/stores", dependencies=[Depends(require_admin)])
+def admin_stores():
+    cat = catalog()
+    users = auth.all_users()
+    counts = {}
+    for L in pipeline._ingest():   # count raw feed rows too, so a blocked store still shows its size
+        counts[L["seller"]] = counts.get(L["seller"], 0) + 1
+    stores = [dict(s, feed_listings=counts.get(sid, 0),
+                   live_offers=sum(L["seller"] == sid for L in cat["listings"].values()),
+                   accounts=[auth.public_user(u) for u in users if u.get("seller_id") == sid])
+              for sid, s in cat["sellers"].items()]
+    stores.sort(key=lambda x: (x["status"] != "active", x["source"] != "feed", x["name"]))
+    return {"stores": stores, "pending_sellers": [auth.public_user(u) for u in users if u.get("status") == "pending"]}
+
+
+@app.post("/api/v1/admin/stores", status_code=201, dependencies=[Depends(require_admin)])
+def admin_add_store(n: NewStore):
+    if not n.website.startswith("https://"):
+        raise HTTPException(422, "آدرس سایت باید با https:// شروع شود")
+    owner = None
+    if n.owner_phone:
+        owner = auth.get_user(auth.normalize_phone(n.owner_phone))
+        if not owner or owner["role"] != "seller" or owner.get("seller_id"):
+            raise HTTPException(422, "این شماره یک حساب فروشنده در انتظار تأیید نیست")
+    with _lock:
+        cat = catalog()
+        if any(s["name"] == n.name.strip() for s in cat["sellers"].values()):
+            raise HTTPException(409, "فروشگاهی با این نام وجود دارد")
+        data = pipeline.load_stores()
+        sid = _store_id(n.website, cat["sellers"])
+        store = dict(id=sid, name=n.name.strip(), website=n.website.rstrip("/"), rating=4.0, verified=False,
+                     shipping=dict(flat=n.shipping_flat, free_over=n.free_over), accuracy=0.9,
+                     format="در انتظار اتصال فید", color=n.color,
+                     added_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+        data["added"].append(store)
+        pipeline.save_stores(data)
+    if owner:   # approve the waiting seller account and attach it to the new store
+        auth._save_user(owner | {"seller_id": sid, "status": "active", "store_name": store["name"]})
+    rebuild()
+    return catalog()["sellers"][sid]
+
+
+def _set_block(sid: str, block: dict | None):
+    with _lock:
+        if sid not in catalog()["sellers"]:
+            raise HTTPException(404, "فروشگاه پیدا نشد")
+        data = pipeline.load_stores()
+        if block is None:
+            data["blocked"].pop(sid, None)
+        else:
+            data["blocked"][sid] = block
+        pipeline.save_stores(data)
+    rebuild()
+    return catalog()["sellers"][sid]
+
+
+@app.post("/api/v1/admin/stores/{sid}/block", dependencies=[Depends(require_admin)])
+def admin_block_store(sid: str, b: BlockStore):
+    return _set_block(sid, {"reason": b.reason.strip(), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+
+
+@app.post("/api/v1/admin/stores/{sid}/unblock", dependencies=[Depends(require_admin)])
+def admin_unblock_store(sid: str):
+    return _set_block(sid, None)
 
 
 @app.get("/api/v1/admin/pipeline", dependencies=[Depends(require_admin)])

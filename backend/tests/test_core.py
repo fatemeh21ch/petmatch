@@ -222,3 +222,80 @@ def test_demo_login_without_otp_only_for_demo_accounts():
     assert r.status_code == 200 and r.json()["user"]["role"] == "seller"
     assert c.get("/api/v1/seller/dashboard").status_code == 200
     assert _fresh().post("/api/v1/auth/demo-login", json={"phone": "09129999999"}).status_code == 403
+
+
+def _admin(c):
+    c.post("/api/v1/auth/demo-login", json={"phone": "09120000003"})
+    return c
+
+
+def _restore_stores(backup):
+    from app import main, pipeline
+    if backup is None:
+        pipeline.STORES.unlink(missing_ok=True)
+    else:
+        pipeline.STORES.write_text(backup, "utf-8")
+    main.rebuild()
+
+
+def test_admin_blocks_store_offers_disappear_and_unblock_restores():
+    from app import pipeline
+    backup = pipeline.STORES.read_text("utf-8") if pipeline.STORES.exists() else None
+    try:
+        seller = _fresh()
+        seller.post("/api/v1/auth/demo-login", json={"phone": "09120000002"})       # petkade
+        lid = next(L for L in seller.get("/api/v1/seller/dashboard").json()["listings"] if L.get("product_id"))
+        assert seller.post("/api/v1/admin/stores/petkade/block", json={}).status_code == 403   # sellers can't
+        a = _admin(_fresh())
+        r = a.post("/api/v1/admin/stores/petkade/block", json={"reason": "قیمت‌های غیرواقعی"})
+        assert r.status_code == 200 and r.json()["status"] == "blocked"
+        offers = a.get(f"/api/v1/products/{lid['product_id']}").json().get("offers") or []
+        assert all(o["seller_id"] != "petkade" for o in offers)
+        assert a.get(f"/api/v1/go/{lid['listing_id']}", follow_redirects=False).status_code == 404
+        d = seller.get("/api/v1/seller/dashboard").json()
+        assert d["status"] == "blocked" and "قیمت‌های غیرواقعی" in d["message"]
+        st = next(x for x in a.get("/api/v1/admin/stores").json()["stores"] if x["id"] == "petkade")
+        assert st["live_offers"] == 0 and st["feed_listings"] > 0
+        assert a.post("/api/v1/admin/stores/petkade/unblock").json()["status"] == "active"
+        assert any(o["seller_id"] == "petkade" for o in a.get(f"/api/v1/products/{lid['product_id']}").json()["offers"])
+        assert a.post("/api/v1/admin/stores/nope/block", json={}).status_code == 404
+    finally:
+        _restore_stores(backup)
+
+
+def test_admin_adds_store_and_activates_waiting_seller():
+    from app import pipeline
+    backup = pipeline.STORES.read_text("utf-8") if pipeline.STORES.exists() else None
+    try:
+        c = _fresh()
+        code = c.post("/api/v1/auth/signup", json={"phone": "09121114455", "name": "رضا", "role": "seller",
+                                                   "store_name": "پت‌لند"}).json()["demo_code"]
+        c.post("/api/v1/auth/otp/verify", json={"phone": "09121114455", "code": code})
+        assert c.get("/api/v1/seller/dashboard").json()["status"] == "pending"
+        a = _admin(_fresh())
+        assert any(u["phone"] == "09121114455" for u in a.get("/api/v1/admin/stores").json()["pending_sellers"])
+        bad = {"name": "پت‌لند", "website": "http://petland.example"}
+        assert a.post("/api/v1/admin/stores", json=bad).status_code == 422
+        r = a.post("/api/v1/admin/stores", json={"name": "پت‌لند", "website": "https://petland.example",
+                                                  "shipping_flat": 50000, "owner_phone": "09121114455"})
+        assert r.status_code == 201, r.text
+        assert r.json()["id"] == "petland" and r.json()["status"] == "active"
+        assert a.post("/api/v1/admin/stores", json={"name": "پت‌لند", "website": "https://x.example"}).status_code == 409
+        d = c.get("/api/v1/seller/dashboard").json()          # same session: account is now attached
+        assert d["status"] == "active" and d["seller"]["id"] == "petland" and d["listings"] == []
+        assert a.get("/api/v1/home").json()["stats"]["sellers"] == 8
+    finally:
+        users = [x for x in json.loads(auth.USERS_FILE.read_text("utf-8")) if x["phone"] != "09121114455"]
+        auth.USERS_FILE.write_text(json.dumps(users, ensure_ascii=False), "utf-8")
+        _restore_stores(backup)
+
+
+def test_compare_products_side_by_side():
+    ids = [r["id"] for r in client.get("/api/v1/search", params={"q": "غذای خشک گربه"}).json()["results"][:3]]
+    r = client.get("/api/v1/compare", params={"ids": ",".join(ids + ["nope"])}).json()
+    assert [x["id"] for x in r["items"]] == ids and r["missing"] == ["nope"]
+    assert all(x["best"] and x["value"] for x in r["items"])
+    pet = json.dumps({"species": "cat", "age_months": 30, "weight_kg": 4})
+    r = client.get("/api/v1/compare", params={"ids": ",".join(ids), "pet": pet}).json()
+    assert r["pet_used"] and all(x["feeding"]["monthly_cost"] > 0 for x in r["items"])
+    assert len(client.get("/api/v1/compare", params={"ids": ",".join(ids * 3)}).json()["items"]) == 3

@@ -46,6 +46,7 @@ function SignupView() {
           <>
             <div className="steps"><span className="on" /><span /></div>
             <h1>ثبت‌نام</h1>
+            {params.get("from") === "login" && <div className="notice info">شماره {form.phone} هنوز در پت‌مچ حساب ندارد. با چند قدم کوتاه ثبت‌نام کن؛ شماره را خودمان پر کردیم.</div>}
             <p className="sub">چند ثانیه طول می‌کشد؛ بعد کد تأیید پیامک می‌شود.</p>
             <form className="form" onSubmit={submit}>
               <div className="role-pick" role="radiogroup" aria-label="نوع حساب">
@@ -72,7 +73,8 @@ function SignupView() {
         ) : (
           <OtpStep phone={form.phone} sent={sent} onBack={() => setSent(null)}
             onResend={() => api("/api/v1/auth/signup", { method: "POST", json: body() })}
-            onVerified={async (u) => { await refresh(); toast(`حساب ${u.role_fa} ساخته شد`); router.push(u.role === "seller" ? "/seller" : "/pet"); }} />
+            onVerified={async (u) => { await refresh(); toast(`حساب ${u.role_fa} ساخته شد`); const nx = params.get("next");
+              router.push(u.role === "seller" ? "/seller" : nx && nx.startsWith("/") && !nx.startsWith("//") ? nx : "/pet"); }} />
         )}
       </div>
     </div>

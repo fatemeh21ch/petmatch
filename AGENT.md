@@ -15,7 +15,7 @@ matches identical products and ranks "best buy" (not just cheapest). UI is **Per
 | Backend (FastAPI) | `python -m uvicorn app.main:app --app-dir backend --port 8000` (no auto-reload: restart after Python edits) | 8000 |
 | Frontend (Next.js 16) | `npm --prefix web run dev` | 3000 |
 | Seed data (first time only) | `python backend/seed/generate.py` | — |
-| Backend tests | `cd backend && python -m pytest -q tests` (35 tests) | — |
+| Backend tests | `cd backend && python -m pytest -q tests` (38 tests) | — |
 | Frontend typecheck | `cd web && npx tsc --noEmit` (if it complains about `.next/types`, delete `web/.next/types` and `web/.next/dev/types`) | — |
 
 `.claude/launch.json` has both servers as `petmatch` and `petmatch-web`. The browser only talks to
@@ -36,22 +36,24 @@ matches identical products and ranks "best buy" (not just cheapest). UI is **Per
 
 Key endpoints (`/api/v1/...`): `search`, `explain`, `home`, `nav`, `products/{id}`, `reports`, `go/{listing}`
 (counted outbound click), `store/{seller}/{listing}`, `auth/{otp/request,otp/verify,signup,me,logout,demo-accounts,demo-login}`,
-`seller/dashboard` (read-only), `admin/{analytics,pipeline,decisions,reset}`.
+`compare?ids=a,b&pet=` (up to 4 products side by side), `seller/dashboard` (read-only; `status` active/pending/blocked),
+`admin/{analytics,pipeline,decisions,reset}`, `admin/stores` (GET list · POST add, optional `owner_phone` activates a waiting seller) ·
+`admin/stores/{id}/block` · `/unblock`.
 
 Data: `backend/data/raw/*` feeds (committed), `ground_truth.json` (matching labels), runtime files
-**gitignored**: `users.json`, `events.json`, `search_log.json`, `decisions.json`, `reports.json`.
+**gitignored**: `users.json`, `events.json`, `search_log.json`, `decisions.json`, `reports.json`, `stores.json` (admin-added and blocked stores; `pipeline.all_sellers()` merges it with `raw/sellers.json`).
 `POST admin/reset` deletes `decisions.json`.
 
 ## Frontend — `web/`
 | Path | What |
 |---|---|
 | `app/layout.tsx` | Root: font, `AuthProvider`, `Toaster` |
-| `app/(site)/` | Shop pages **with** the shop header (search bar, category menus, my pet, favorites) + footer: home, `search`, `p/[id]`, `pet`, `favorites`, `guide/[id]`, `login`, `signup` |
-| `app/(panel)/` | Work panels with their **own** slim header (`components/PanelHeader.tsx`), no shop search/menus: `seller` (read-only dashboard), `admin` |
+| `app/(site)/` | Shop pages **with** the shop header (search bar, category menus, my pet, favorites) + footer: home, `search`, `p/[id]`, `pet`, `favorites`, `compare`, `guide/[id]`, `login`, `signup` (login with an unknown number redirects to signup with the phone filled) |
+| `app/(panel)/` | Work panels with their **own** slim header (`components/PanelHeader.tsx`), no shop search/menus: `seller` (read-only dashboard), `admin` (tabs: dashboard · matching · stores) |
 | `app/store/[seller]/[listing]` | Fake shop page after a "buy" click (deliberately outside both layouts) |
-| `components/` | `Header` (shop), `PanelHeader` (panels, demo account switch), `Guard` (role gate + auto demo login), `ProductView`, `Charts` (SVG), `Otp`, `ui` (`Svg`, `Ui` icons, `Stars`, `Empty`, …) |
+| `components/` | `Header` (shop), `PanelHeader` (panels, demo account switch), `AdminStores` (admin stores tab), `CompareBar` + `CompareButton` (in `ui`), `Guard` (role gate + auto demo login), `ProductView`, `Charts` (SVG), `Otp`, `ui` (`Svg`, `Ui` icons, `Stars`, `Empty`, …) |
 | `lib/api.ts` | `api()` (browser, same-origin) and `serverApi()` (server components → :8000) |
-| `lib/client.tsx` | `useAuth`, pets & favorites in localStorage, `toast` |
+| `lib/client.tsx` | `useAuth`, pets, favorites and the compare list (`useCompare`, max 4) in localStorage, `toast` |
 | `lib/art.ts` | All SVG art; UI icon set is `UI` (`ui(name)`) — add new icons there |
 | `lib/format.ts` | `fa()` Persian numbers, `fd()` Persian digits in text, `q2h()` search URLs |
 | `app/globals.css`, `app/extra.css` | All styles (plain CSS, tokens in `:root`). Panel/seller-form styles at the end of `extra.css` |
@@ -59,6 +61,8 @@ Data: `backend/data/raw/*` feeds (committed), `ground_truth.json` (matching labe
 ## Conventions
 - **Security is server-side.** Every protected endpoint uses `Depends(auth.require_role(...))`; `Guard` is UX only.
   A seller only ever sees its own store (`seller_id` comes from the session, never from the request).
+- A **blocked** store's feed is not read at all (`build_catalog` skips it): no offers, no clicks, its seller sees a blocked notice.
+  A store an admin adds has no products until its feed is connected.
 - Products come **only from feeds**; the seller panel has no add/edit/delete (product decision, keep it that way).
 - **Demo mode** (`PETMATCH_DEMO_OTP=1`, default): OTP is returned in the response and `auth/demo-login`
   opens a session for the fixed demo accounts with no code. `Guard` uses it so `/seller` and `/admin`

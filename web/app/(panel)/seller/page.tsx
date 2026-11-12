@@ -16,6 +16,13 @@ function Dashboard() {
   useEffect(() => { api("/api/v1/seller/dashboard").then(setD).catch((e) => setErr(e.message)); }, []);
   if (err) return <div className="notice">{err}</div>;
   if (!d) return <div className="skeleton" style={{ height: 420, marginTop: 24 }} />;
+  if (d.status === "blocked") return (
+    <Empty art={dogArt({ sweater: "#c0392b" })}>
+      <h2 style={{ fontSize: 20 }}>{d.seller.name} مسدود است</h2>
+      <p>{d.message}</p>
+      <p className="hint">برای رفع مسدودی با پشتیبانی پت‌مچ تماس بگیرید.</p>
+    </Empty>
+  );
   if (d.status === "pending") return (
     <Empty art={dogArt({ sweater: "#6b5bd1" })}>
       <h2 style={{ fontSize: 20 }}>{d.user.store_name || "فروشگاه شما"} در انتظار تأیید است</h2>
@@ -41,9 +48,10 @@ function Dashboard() {
           <div className="meta">{s.verified && <span className="pill good"><Ui n="shield" s={12} /> تأییدشده</span>}<Stars r={s.rating} /> {fa(s.rating)}
             <span>·</span><span className="ltr" style={{ direction: "ltr" }}>{s.website.replace("https://", "")}</span><span>·</span><span>فرمت فید: {s.format}</span></div>
         </div>
-        <div className="acts"><Link className="btn btn-ghost btn-sm" href={`/store/${s.id}/${d.listings[0]?.listing_id}`}>دیدن فروشگاه</Link></div>
+        {d.listings[0] && <div className="acts"><Link className="btn btn-ghost btn-sm" href={`/store/${s.id}/${d.listings[0].listing_id}`}>دیدن فروشگاه</Link></div>}
       </div>
 
+      {!d.listings.length && <div className="notice info">فروشگاه شما ثبت و فعال شده ولی هنوز فیدی وصل نشده است. فید محصولات (CSV، JSON یا API) را به پشتیبانی بدهید تا محصولاتتان وارد مقایسه شوند.</div>}
       <div className="kcards">
         <div className="kcard" style={{ background: "var(--t2)" }}><div className="k">کلیک امروز (تا این لحظه)</div><div className="v">{fa(k.clicks_today)}</div>
           <div className={`d ${diff >= 0 ? "up" : "down"}`}>{diff >= 0 ? "▲" : "▼"} {fa(Math.abs(diff))}٪ نسبت به دیروز ({fa(k.clicks_yesterday)})</div></div>

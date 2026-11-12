@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CompareBar from "@/components/CompareBar";
 import Header, { TabBar } from "@/components/Header";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <div className="fine">نسخه نمایشی: فروشگاه‌ها، قیمت‌ها، آمار و لینک‌ها ساختگی‌اند. تصاویر محصولات نمادین هستند. پیشنهادها جایگزین نظر دامپزشک نیستند.</div>
         </div>
       </footer>
+      <CompareBar />
       <TabBar />
     </>
   );

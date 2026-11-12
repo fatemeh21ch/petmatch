@@ -6,7 +6,7 @@ import { bowlArt, catArt, dogArt, pkgSVG } from "@/lib/art";
 import { petQuery, toast, usePets } from "@/lib/client";
 import { ago, fa, fd, q2h, shortToman, SP, TYPE, unitLabel, weeksText } from "@/lib/format";
 import { PriceChart } from "./Charts";
-import { FavButton, Stars, Svg, Ui } from "./ui";
+import { CompareButton, FavButton, Stars, Svg, Ui } from "./ui";
 
 function FeedBox({ f, petName }: { f: any; petName: string }) {
   return (
@@ -99,6 +99,7 @@ export default function ProductView({ initial, id }: { initial: any; id: string 
                 </div>
               </>
             ) : <div className="big" style={{ fontSize: 20 }}>فعلاً در هیچ فروشگاهی موجود نیست</div>}
+            <CompareButton id={p.id} block />
             {d.caveat && <div className="notice">{d.caveat}</div>}
             {d.feeding ? <FeedBox f={d.feeding} petName={active?.name || "حیوانت"} />
               : d.pet_needs_weight ? <div className="notice info" style={{ marginTop: 12 }}>وزن {active?.name || "حیوانت"} را در <Link href="/pet">پروفایل</Link> وارد کن تا ببینی این بسته چند هفته کافی است و ماهی چقدر خرج دارد.</div> : null}

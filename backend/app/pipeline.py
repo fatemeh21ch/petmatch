@@ -23,6 +23,7 @@ from .text import extract, normalize
 DATA = Path(__file__).resolve().parents[1] / "data"
 RAW = DATA / "raw"
 DECISIONS = DATA / "decisions.json"
+STORES = DATA / "stores.json"   # admin changes: {"added": [store, ...], "blocked": {store_id: {...}}}
 
 AUTO_MERGE = 0.95
 REVIEW = 0.75
@@ -242,11 +243,33 @@ def fmt_qty(amount, unit):
     return f"{amount / 1000:g} کیلوگرم" if amount >= 1000 else f"{amount} گرم"
 
 
+def load_stores() -> dict:
+    data = json.loads(STORES.read_text("utf-8")) if STORES.exists() else {}
+    return {"added": data.get("added", []), "blocked": data.get("blocked", {})}
+
+
+def save_stores(data: dict):
+    STORES.write_text(json.dumps(data, ensure_ascii=False, indent=1), "utf-8")
+
+
+def all_sellers() -> dict:
+    """Feed stores from sellers.json plus stores an admin added; each tagged with its status."""
+    admin = load_stores()
+    sellers = {s["id"]: s | {"source": "feed"} for s in json.loads((RAW / "sellers.json").read_text("utf-8"))}
+    sellers |= {s["id"]: s | {"source": "admin"} for s in admin["added"]}
+    for sid, s in sellers.items():
+        b = admin["blocked"].get(sid)
+        s["status"] = "blocked" if b else "active"
+        s["blocked"] = b
+    return sellers
+
+
 def build_catalog():
-    sellers = {s["id"]: s for s in json.loads((RAW / "sellers.json").read_text("utf-8"))}
+    sellers = all_sellers()
     history = json.loads((DATA / "price_history.json").read_text("utf-8"))
 
-    raw = _ingest()
+    # a blocked store's feed is not read at all: none of its offers can appear or be clicked
+    raw = [L for L in _ingest() if sellers[L["seller"]]["status"] == "active"]
     listings, rejected = [], []
     for L in raw:
         problems = _validate(L)

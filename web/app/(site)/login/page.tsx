@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import OtpStep from "@/components/Otp";
 import { Svg, Ui } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { catArt } from "@/lib/art";
 import { homeFor, toast, useAuth } from "@/lib/client";
 
@@ -28,7 +28,14 @@ function LoginView() {
   async function request(p = phone) {
     setBusy(true); setErr("");
     try { setPhone(p); setSent(await api("/api/v1/auth/otp/request", { method: "POST", json: { phone: p } })); }
-    catch (e: any) { setErr(e.message); }
+    catch (e: any) {
+      if (e instanceof ApiError && e.status === 404) {   // no account with this number: go straight to signup
+        toast("با این شماره حسابی نداری؛ ثبت‌نام کن.");
+        router.push(`/signup?phone=${encodeURIComponent(p)}&from=login${next ? `&next=${encodeURIComponent(next)}` : ""}`);
+        return;
+      }
+      setErr(e.message);
+    }
     finally { setBusy(false); }
   }
 

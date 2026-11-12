@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Donut, HBars, Sparkline, TimeChart } from "@/components/Charts";
+import AdminStores from "@/components/AdminStores";
 import Guard from "@/components/Guard";
 import { Ui } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -65,7 +66,7 @@ function Overview() {
       <div className="grid2 sec">
         <div className="card-p"><h3>سلامت فید فروشگاه‌ها</h3><div className="sub">پیشنهادهای هر فروشگاه و مشکلاتشان</div>
           <div className="table-wrap"><table><thead><tr><th>فروشگاه</th><th>پیشنهاد</th><th>موجود</th><th>قدیمی</th><th>مشکوک</th><th>امتیاز</th></tr></thead>
-            <tbody>{d.sellers.map((x: any) => <tr key={x.name}><td><i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: x.color, marginLeft: 6 }} />{x.name}</td>
+            <tbody>{d.sellers.map((x: any) => <tr key={x.name}><td><i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: x.color, marginLeft: 6 }} />{x.name}{x.status === "blocked" && <span className="pill bad" style={{ marginRight: 6 }}>مسدود</span>}</td>
               <td>{fa(x.listings)}</td><td>{fa(x.in_stock)}</td><td className={x.stale ? "fit no" : ""}>{fa(x.stale)}</td><td className={x.anomalies ? "fit no" : ""}>{fa(x.anomalies)}</td><td>{fa(x.rating)}</td></tr>)}</tbody></table></div></div>
         <div className="card-p"><h3>پرتکرارترین جست‌وجوها</h3><div className="sub">۳۰ روز</div>
           <div className="qlist">{s.top.slice(0, 8).map(([q, n]: [string, number]) => <Link key={q} className="qrow" href={q2h(q)}><span>{q}</span><b>{fa(n)}</b></Link>)}</div>
@@ -135,18 +136,19 @@ function Matching() {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"overview" | "matching">("overview");
+  const [tab, setTab] = useState<"overview" | "matching" | "stores">("overview");
   return (
     <Guard role="admin">
       <div className="dash-head">
         <span className="logo-tile" style={{ background: "var(--ink)" }}><Ui n="shield" s={28} /></span>
-        <div><h1>پنل مدیریت پت‌مچ</h1><div className="meta">داده، جست‌وجو، کلیک و کیفیت تطبیق محصول</div></div>
+        <div><h1>پنل مدیریت پت‌مچ</h1><div className="meta">داده، جست‌وجو، کلیک، کیفیت تطبیق محصول و فروشگاه‌ها</div></div>
       </div>
       <div className="tabs-top" role="tablist">
         <button role="tab" aria-selected={tab === "overview"} onClick={() => setTab("overview")}>داشبورد و نمودارها</button>
         <button role="tab" aria-selected={tab === "matching"} onClick={() => setTab("matching")}>تطبیق محصول و داده خام</button>
+        <button role="tab" aria-selected={tab === "stores"} onClick={() => setTab("stores")}>فروشگاه‌ها</button>
       </div>
-      {tab === "overview" ? <Overview /> : <Matching />}
+      {tab === "overview" ? <Overview /> : tab === "matching" ? <Matching /> : <AdminStores />}
     </Guard>
   );
 }

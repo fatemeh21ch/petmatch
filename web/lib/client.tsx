@@ -79,6 +79,22 @@ export function useFavs() {
   return { favs, toggle };
 }
 
+/* ------------------------------------------------------------------ compare (device only, up to 4 products) */
+export const MAX_COMPARE = 4;
+export function useCompare() {
+  const ids = useLocal<string[]>("pm_compare", EMPTY);
+  const has = (id: string) => ids.includes(id);
+  /** Returns the new state, or "full" when the list already has MAX_COMPARE products. */
+  const toggle = (id: string): boolean | "full" => {
+    const now = read<string[]>("pm_compare", EMPTY);   // current list, not the one from the last render
+    if (now.includes(id)) { write("pm_compare", now.filter((x) => x !== id)); return false; }
+    if (now.length >= MAX_COMPARE) return "full";
+    write("pm_compare", [...now, id]);
+    return true;
+  };
+  return { ids, has, toggle, clear: () => write("pm_compare", []), set: (l: string[]) => write("pm_compare", l.slice(0, MAX_COMPARE)) };
+}
+
 /* ------------------------------------------------------------------ toast */
 let toastFn: (m: string) => void = () => {};
 export const toast = (m: string) => toastFn(m);

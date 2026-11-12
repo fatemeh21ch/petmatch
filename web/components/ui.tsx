@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { pkgSVG, ui } from "@/lib/art";
-import { toast, useFavs } from "@/lib/client";
+import { MAX_COMPARE, toast, useCompare, useFavs } from "@/lib/client";
 import { fa, fd, shortToman, weeksText } from "@/lib/format";
 
 /** Render one of our own generated SVG strings (all data inside is escaped in lib/art.ts). */
@@ -43,6 +43,22 @@ export function FavButton({ card, size = 18 }: { card: any; size?: number }) {
   );
 }
 
+export function CompareButton({ id, block }: { id: string; block?: boolean }) {
+  const { has, toggle } = useCompare();
+  const on = has(id);
+  return (
+    <button className={`cmp-btn ${on ? "on" : ""} ${block ? "block" : ""}`} aria-pressed={on}
+      onClick={(e) => {
+        e.preventDefault();
+        const r = toggle(id);
+        toast(r === "full" ? `حداکثر ${fa(MAX_COMPARE)} محصول را می‌شود مقایسه کرد؛ یکی را از نوار مقایسه بردارید.`
+          : r ? "به مقایسه اضافه شد" : "از مقایسه برداشته شد");
+      }}>
+      <Ui n="compare" s={16} /> {on ? "در مقایسه" : "مقایسه"}
+    </button>
+  );
+}
+
 export function ProductCard({ r, tag, tagCls = "" }: { r: any; tag?: string; tagCls?: string }) {
   const b = r.best;
   const fit = (r.fit_notes || []).slice(0, 1);
@@ -66,6 +82,7 @@ export function ProductCard({ r, tag, tagCls = "" }: { r: any; tag?: string; tag
         </div>
         <span className="stores">{fa(r.available_count)} فروشگاه</span>
       </div>
+      <CompareButton id={r.id} />
     </article>
   );
 }
