@@ -23,8 +23,6 @@ from .text import extract, normalize
 DATA = Path(__file__).resolve().parents[1] / "data"
 RAW = DATA / "raw"
 DECISIONS = DATA / "decisions.json"
-SELLER_LISTINGS = DATA / "seller_listings.json"   # products sellers add by hand in their panel
-SELLER_OVERRIDES = DATA / "seller_overrides.json"  # seller edits on top of feed listings: {listing_id: {...}}
 
 AUTO_MERGE = 0.95
 REVIEW = 0.75
@@ -47,37 +45,7 @@ def _read_csv(name):
         return list(csv.DictReader(f))
 
 
-def load_overrides() -> dict:
-    return json.loads(SELLER_OVERRIDES.read_text("utf-8")) if SELLER_OVERRIDES.exists() else {}
-
-
-def _apply_overrides(listings):
-    """A seller's panel edit wins over its feed until the next feed sync (title, price, stock, hidden)."""
-    ov = load_overrides()
-    for L in listings:
-        o = ov.get(L["id"])
-        if not o or L.get("manual"):
-            continue
-        for k in ("title", "price", "available", "hidden"):
-            if k in o:
-                L[k] = o[k]
-        L["checked"] = o["updated_at"]
-        L["edited"] = True
-    return listings
-
-
-def load_seller_listings() -> list:
-    return json.loads(SELLER_LISTINGS.read_text("utf-8")) if SELLER_LISTINGS.exists() else []
-
-
-def manual_listing(r: dict) -> dict:
-    """A product a seller typed into the panel: just another feed, same shape, same matching."""
-    return dict(id=r["id"], seller=r["seller"], title=r["title"], extra=f'{r.get("weight", "")} {r.get("category", "")}'.strip(),
-                price=int(r["price_toman"]), available=bool(r["available"]), url=r["url"], checked=r["updated_at"],
-                raw=r, manual=True)
-
-
-def _ingest(extra=None):
+def _ingest():
     """One adapter per store: each speaks its own format, all emit the same shape."""
     out = []
     for r in _read_csv("petkade.csv"):
@@ -107,8 +75,7 @@ def _ingest(extra=None):
         mult = 1000 if "هزار" in r["price"] else 1
         out.append(dict(id=r["ref"], seller="pashmaloo", title=r["title"], extra="", price=_digits(r["price"]) * mult,
                         available=r["stock"] == "yes", url=r["url"], checked=r["updated"], raw=r))
-    out += [manual_listing(r) for r in load_seller_listings() + list(extra or [])]
-    return _apply_overrides(out)
+    return out
 
 
 def _validate(listing):
@@ -275,15 +242,11 @@ def fmt_qty(amount, unit):
     return f"{amount / 1000:g} کیلوگرم" if amount >= 1000 else f"{amount} گرم"
 
 
-def build_catalog(extra=None, exclude=()):
-    """`extra`: unsaved seller listings for a dry run (the add-product preview); `exclude`: listing ids
-    left out of that dry run (the listing being edited, so it is not compared with itself)."""
+def build_catalog():
     sellers = {s["id"]: s for s in json.loads((RAW / "sellers.json").read_text("utf-8"))}
     history = json.loads((DATA / "price_history.json").read_text("utf-8"))
 
-    everything = _ingest(extra)
-    hidden = [L for L in everything if L.get("hidden")]   # removed by the seller: kept so it can be restored
-    raw = [L for L in everything if not L.get("hidden") and L["id"] not in exclude]
+    raw = _ingest()
     listings, rejected = [], []
     for L in raw:
         problems = _validate(L)
@@ -323,7 +286,7 @@ def build_catalog(extra=None, exclude=()):
                                qty_label=fmt_qty(rep["amount"], rep["unit"]), tokens=rep["tokens"], offers=offers)
 
     stats = _stats(raw, listings, rejected, log, review, blocked, products)
-    return dict(products=products, review=review, blocked=blocked, log=log, stats=stats, hidden=hidden,
+    return dict(products=products, review=review, blocked=blocked, log=log, stats=stats,
                 listings={L["id"]: L for L in listings}, sellers=sellers)
 
 

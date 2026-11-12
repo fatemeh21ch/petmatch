@@ -41,8 +41,7 @@ function Dashboard() {
           <div className="meta">{s.verified && <span className="pill good"><Ui n="shield" s={12} /> تأییدشده</span>}<Stars r={s.rating} /> {fa(s.rating)}
             <span>·</span><span className="ltr" style={{ direction: "ltr" }}>{s.website.replace("https://", "")}</span><span>·</span><span>فرمت فید: {s.format}</span></div>
         </div>
-        <div className="acts"><Link className="btn btn-primary btn-sm" href="/seller/products"><Ui n="plus" s={16} /> افزودن محصول</Link>
-          <Link className="btn btn-ghost btn-sm" href={`/store/${s.id}/${d.listings[0]?.listing_id}`}>دیدن فروشگاه</Link></div>
+        <div className="acts"><Link className="btn btn-ghost btn-sm" href={`/store/${s.id}/${d.listings[0]?.listing_id}`}>دیدن فروشگاه</Link></div>
       </div>
 
       <div className="kcards">
@@ -80,17 +79,16 @@ function Dashboard() {
           <div className="sortbar" style={{ margin: 0 }}>{([["clicks", "کلیک"], ["views", "بازدید"], ["gap", "فاصله با ارزان‌ترین"]] as const).map(([k2, l]) => (
             <button key={k2} className="sort" aria-pressed={sort === k2} onClick={() => setSort(k2)}>{l}</button>))}</div></div>
         <div className="table-wrap"><table>
-          <thead><tr><th>محصول</th><th>قیمت نهایی</th><th>جایگاه</th><th>ارزان‌ترین رقیب</th><th>بازدید</th><th>کلیک</th><th>CTR</th><th>وضعیت</th><th></th></tr></thead>
+          <thead><tr><th>محصول</th><th>قیمت نهایی</th><th>جایگاه</th><th>ارزان‌ترین رقیب</th><th>بازدید</th><th>کلیک</th><th>CTR</th><th>وضعیت</th></tr></thead>
           <tbody>{rows.map((r: any) => (
             <tr key={r.listing_id}>
               <td style={{ minWidth: 260 }}>{r.product_id ? <Link href={`/p/${r.product_id}`} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <Svg className="mini-thumb" html={pkgSVG(r, 36)} /><span>{fd(r.name_fa)} {r.manual && <span className="pill">دستی</span>}</span></Link> : <span>{r.title} <span className="pill warn">در صف بررسی تطبیق</span></span>}</td>
+                <Svg className="mini-thumb" html={pkgSVG(r, 36)} /><span>{fd(r.name_fa)}</span></Link> : <span>{r.title} <span className="pill warn">در صف بررسی تطبیق</span></span>}</td>
               <td>{fa(r.total)}{r.shipping ? <small className="muted"> (ارسال {fa(r.shipping)})</small> : null}</td>
               <td>{r.position ? <span className={`pos ${r.position === 1 ? "p1" : ""}`}>{fa(r.position)} از {fa(r.competitors)}</span> : "—"}</td>
               <td>{r.best_rival ? <>{r.best_rival.seller}<br /><small className={r.gap_pct > 0 ? "fit no" : "fit ok"}>{r.gap_pct > 0 ? `شما ${fa(r.gap_pct)}٪ گران‌تر` : r.gap_pct < 0 ? `شما ${fa(Math.abs(r.gap_pct))}٪ ارزان‌تر` : "هم‌قیمت"}</small></> : <span className="muted">رقیبی ندارد</span>}</td>
               <td>{fa(r.views)}</td><td><b>{fa(r.clicks)}</b></td><td>{fa(r.ctr)}٪</td>
               <td>{r.anomaly ? <span className="pill bad">قیمت مشکوک</span> : r.stale ? <span className="pill warn">قیمت قدیمی</span> : !r.available ? <span className="pill">ناموجود</span> : <span className="pill good">فعال</span>}</td>
-              <td><Link className="btn btn-ghost btn-sm" href={`/seller/products?edit=${r.listing_id}`}>ویرایش</Link></td>
             </tr>
           ))}</tbody>
         </table></div>

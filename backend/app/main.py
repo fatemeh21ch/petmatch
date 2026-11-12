@@ -1,5 +1,4 @@
 import json
-import secrets
 import statistics
 import threading
 from datetime import datetime, timezone
@@ -425,7 +424,7 @@ def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
         p = cat["products"].get(pid)
         if not p or entry["decision"] == "review":   # waiting for a human: not in the comparison yet
             rows.append({"listing_id": L["id"], "title": L["title"], "status": "review", "price": L["price"],
-                         "available": L["available"], "manual": bool(L.get("manual"))})
+                         "available": L["available"]})
             continue
         me_ = next(o for o in p["offers"] if o["listing_id"] == L["id"])
         rivals = [o for o in p["offers"] if o["available"] and not o["anomaly"] and o["seller_id"] != sid]
@@ -440,7 +439,7 @@ def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
                "best_rival": best_rival and {"seller": best_rival["seller"], "total": best_rival["total"]},
                "gap_pct": gap, "views": v, "clicks": c, "ctr": round(c / v * 100, 1) if v else 0,
                "type": p["type"], "species": p["species"], "brand": p["brand"], "brand_en": kb.BRANDS.get(p["brand"]),
-               "qty_label": p["qty_label"], "manual": bool(L.get("manual"))}
+               "qty_label": p["qty_label"]}
         rows.append(row)
         if me_["anomaly"]:
             alerts.append({"level": "bad", "text": f"قیمت «{p['name_fa']}» با بازار نمی‌خواند و در پیشنهادها نمایش داده نمی‌شود."})
@@ -461,205 +460,6 @@ def seller_dashboard(user: dict = Depends(auth.require_role("seller"))):
                  "first_place": sum(1 for r in rows if r.get("position") == 1)},
         "series": series, "listings": rows, "alerts": alerts[:8],
     }
-
-
-# ------------------------------------------------------------------ seller: add / edit products by hand
-# A hand-added product is just one more feed: it goes through the same normalisation, validation and
-# matching as the CSV/JSON feeds, so the seller sees immediately whether it joined an existing product,
-# became a new one, or went to the admin's review queue.
-SELLER_CATEGORIES = [f"{t} {s}" for s in ("گربه", "سگ") for t in ("غذای خشک", "غذای تر", "تشویقی", "خاک")
-                     if not (t == "خاک" and s == "سگ")]
-
-
-class NewListing(BaseModel):
-    title: str = Field(min_length=5, max_length=120)
-    category: str = Field(max_length=30)
-    weight: str = Field("", max_length=30)
-    price_toman: int = Field(ge=1000, le=500_000_000)
-    available: bool = True
-    url: str | None = Field(None, max_length=200)
-
-
-class ListingPatch(BaseModel):
-    title: str | None = Field(None, min_length=5, max_length=120)
-    category: str | None = Field(None, max_length=30)
-    weight: str | None = Field(None, max_length=30)
-    price_toman: int | None = Field(None, ge=1000, le=500_000_000)
-    available: bool | None = None
-    url: str | None = Field(None, max_length=200)
-    hidden: bool | None = None   # feed products: hide from PetMatch / restore
-
-
-class Preview(NewListing):
-    replaces: str | None = Field(None, max_length=20)   # editing: leave the old version out of the dry run
-
-
-def _active_seller(user: dict) -> str:
-    sid = user.get("seller_id")
-    if not sid:
-        raise HTTPException(403, "فروشگاه شما هنوز تأیید نشده است")
-    return sid
-
-
-def _listing_record(n: NewListing, sid: str, lid: str) -> dict:
-    if n.category not in SELLER_CATEGORIES:
-        raise HTTPException(422, "دسته نامعتبر است")
-    url = (n.url or "").strip() or f'{catalog()["sellers"][sid]["website"]}/p/{lid}'
-    if not url.startswith("https://"):
-        raise HTTPException(422, "لینک محصول باید با https:// شروع شود")
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    return dict(id=lid, seller=sid, title=n.title.strip(), category=n.category, weight=n.weight.strip(),
-                price_toman=n.price_toman, available=n.available, url=url, created_at=now, updated_at=now)
-
-
-def _match_report(cat: dict, lid: str, preview: bool = False) -> dict:
-    """What the pipeline did with this listing, in words a seller understands."""
-    L = cat["listings"].get(lid)
-    if not L:
-        bad = next((r for r in cat["stats"]["rejected"] if r["id"] == lid), None)
-        return {"decision": "rejected", "text": "آگهی رد شد: " + "، ".join((bad or {}).get("problems", [])),
-                "understood": {}, "missing": []}
-    a, entry = L["attrs"], cat["log"][lid]
-    p = cat["products"].get(entry["product"])
-    understood = {}
-    if a["brand"]: understood["برند"] = kb.BRAND_FA.get(a["brand"], a["brand"])
-    if a["species"]: understood["حیوان"] = kb.FA_LABEL.get(a["species"], a["species"])
-    if a["type"]: understood["نوع"] = kb.FA_LABEL.get(a["type"], a["type"])
-    if a["stage"]: understood["سن"] = kb.FA_LABEL.get(a["stage"], a["stage"])
-    if a["amount"]: understood["وزن/حجم"] = pipeline.fmt_qty(a["amount"], a["unit"])
-    extra = [kb.FA_LABEL.get(t, t) for t in a["line"] + a["numbers"] + a["flavor"] + a["variant"] + a["size"]]
-    if extra: understood["ویژگی"] = "، ".join(dict.fromkeys(extra))
-    missing = [lbl for k, lbl in (("brand", "برند"), ("species", "گربه یا سگ"), ("type", "نوع محصول"), ("amount", "وزن یا حجم"))
-               if not a[k]]
-    d = entry["decision"]
-    name = p["name_fa"] if p else ""
-    rivals = len({o["seller_id"] for o in p["offers"] if o["seller_id"] != L["seller"]}) if p else 0
-    dup = bool(p) and d in ("auto", "approved") and any(o["seller_id"] == L["seller"] and o["listing_id"] != lid for o in p["offers"])
-    will = "وصل می‌شود و" if preview else "وصل شد و از همین حالا"
-    text = {
-        "auto": f"به محصول «{name}» {will} کنار {rivals} فروشگاه دیگر مقایسه می‌شود.",
-        "approved": f"با تأیید مدیر به «{name}» وصل شده است.",
-        "new": "محصول مشابهی در کاتالوگ نیست؛ به‌عنوان محصول جدید ساخته " + ("می‌شود." if preview else "شد و در جست‌وجو دیده می‌شود."),
-        "review": f"شبیه «{name}» است ولی مطمئن نیستیم ({'، '.join(entry['reasons'][:2]) or 'شباهت متوسط'}). "
-                  "به صف بررسی مدیر می‌رود و تا تأیید در مقایسه نمی‌آید.",
-    }[d]
-    return {"decision": d, "text": text, "product_id": p["id"] if p and d != "review" else None, "product_name": name,
-            "score": entry["score"], "understood": understood, "missing": missing,
-            "duplicate": "همین محصول را از فید فروشگاهتان هم داریم؛ دو پیشنهاد از یک فروشگاه کنار هم دیده می‌شود." if dup else None}
-
-
-def _now():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _own_listing(cat: dict, lid: str, sid: str) -> dict:
-    L = cat["listings"].get(lid) or next((h for h in cat["hidden"] if h["id"] == lid), None)
-    if not L or L["seller"] != sid:   # never touch another store's products
-        raise HTTPException(404, "محصول پیدا نشد")
-    return L
-
-
-def _item(cat: dict, L: dict) -> dict:
-    """One row of the seller's product table: feed products and hand-added ones alike."""
-    manual, hidden = bool(L.get("manual")), bool(L.get("hidden"))
-    r = L["raw"]
-    return dict(id=L["id"], source="manual" if manual else "feed", title=L["title"],
-                category=r.get("category") if manual else None, weight=r.get("weight") if manual else None,
-                price_toman=int(L["price"]), available=bool(L["available"]), url=L["url"], updated_at=L["checked"],
-                edited=bool(L.get("edited")), hidden=hidden, match=None if hidden else _match_report(cat, L["id"]))
-
-
-@app.get("/api/v1/seller/listings")
-def seller_listings(user: dict = Depends(auth.require_role("seller"))):
-    sid = _active_seller(user)
-    cat = catalog()
-    mine = [L for L in cat["listings"].values() if L["seller"] == sid] + [h for h in cat["hidden"] if h["seller"] == sid]
-    order = {r["id"]: i for i, r in enumerate(pipeline.load_seller_listings())}
-    # newest hand-added first, then the feed alphabetically, removed ones last
-    mine.sort(key=lambda L: (bool(L.get("hidden")), not L.get("manual"), -order.get(L["id"], 0), L["title"]))
-    return {"categories": SELLER_CATEGORIES, "website": cat["sellers"][sid]["website"],
-            "feed_format": cat["sellers"][sid]["format"], "items": [_item(cat, L) for L in mine]}
-
-
-@app.post("/api/v1/seller/listings/preview")
-def seller_listing_preview(n: Preview, user: dict = Depends(auth.require_role("seller"))):
-    """Dry run: the real pipeline on the catalog plus this one unsaved listing. Nothing is stored."""
-    sid = _active_seller(user)
-    if n.replaces:
-        _own_listing(catalog(), n.replaces, sid)
-    rec = _listing_record(n, sid, "preview")
-    dry = pipeline.build_catalog(extra=[rec], exclude=(n.replaces,) if n.replaces else ())
-    return _match_report(dry, "preview", preview=True)
-
-
-@app.post("/api/v1/seller/listings", status_code=201)
-def seller_listing_create(n: NewListing, user: dict = Depends(auth.require_role("seller"))):
-    sid = _active_seller(user)
-    with _lock:
-        items = pipeline.load_seller_listings()
-        if sum(r["seller"] == sid for r in items) >= 100:
-            raise HTTPException(429, "حداکثر ۱۰۰ محصول دستی؛ برای بیشتر، فید CSV یا API وصل کنید")
-        lid = f"man-{sid[:9]}-{secrets.token_hex(2)}"
-        rec = _listing_record(n, sid, lid)
-        pipeline.SELLER_LISTINGS.write_text(json.dumps(items + [rec], ensure_ascii=False, indent=1), "utf-8")
-    rebuild()
-    return _item(catalog(), catalog()["listings"][lid])
-
-
-@app.patch("/api/v1/seller/listings/{lid}")
-def seller_listing_update(lid: str, patch: ListingPatch, user: dict = Depends(auth.require_role("seller"))):
-    """Hand-added products: every field. Feed products: title, price and stock, stored as an override
-    on top of the feed (in production the next feed sync would win), plus hide / restore."""
-    sid = _active_seller(user)
-    L = _own_listing(catalog(), lid, sid)
-    changes = patch.model_dump(exclude_none=True)
-    if not changes:
-        raise HTTPException(422, "تغییری فرستاده نشد")
-    if "title" in changes:
-        changes["title"] = changes["title"].strip()
-    with _lock:
-        if L.get("manual"):
-            if "hidden" in changes:
-                raise HTTPException(422, "محصول دستی را حذف کنید، نه پنهان")
-            items = pipeline.load_seller_listings()
-            rec = next(r for r in items if r["id"] == lid)
-            for k in ("title", "category", "weight", "price_toman", "available", "url"):
-                if k in changes:
-                    rec[k] = changes[k]
-            if rec["category"] not in SELLER_CATEGORIES:
-                raise HTTPException(422, "دسته نامعتبر است")
-            if not rec["url"].startswith("https://"):
-                raise HTTPException(422, "لینک محصول باید با https:// شروع شود")
-            rec["updated_at"] = _now()   # the price is fresh again
-            pipeline.SELLER_LISTINGS.write_text(json.dumps(items, ensure_ascii=False, indent=1), "utf-8")
-        else:
-            if {"category", "weight", "url"} & changes.keys():
-                raise HTTPException(422, "برای محصولات فید فقط عنوان، قیمت و موجودی قابل ویرایش است")
-            ov = pipeline.load_overrides()
-            o = ov.get(lid, {})
-            o.update({"price" if k == "price_toman" else k: v for k, v in changes.items()})
-            o["updated_at"] = _now()
-            ov[lid] = o
-            pipeline.SELLER_OVERRIDES.write_text(json.dumps(ov, ensure_ascii=False, indent=1), "utf-8")
-    rebuild()
-    return _item(catalog(), _own_listing(catalog(), lid, sid))
-
-
-@app.delete("/api/v1/seller/listings/{lid}")
-def seller_listing_delete(lid: str, user: dict = Depends(auth.require_role("seller"))):
-    """Hand-added: deleted. Feed product: hidden from PetMatch (restorable), since the feed still sends it."""
-    sid = _active_seller(user)
-    L = _own_listing(catalog(), lid, sid)
-    with _lock:
-        if L.get("manual"):
-            items = [r for r in pipeline.load_seller_listings() if r["id"] != lid]
-            pipeline.SELLER_LISTINGS.write_text(json.dumps(items, ensure_ascii=False, indent=1), "utf-8")
-        else:
-            ov = pipeline.load_overrides()
-            ov[lid] = ov.get(lid, {}) | {"hidden": True, "updated_at": _now()}
-            pipeline.SELLER_OVERRIDES.write_text(json.dumps(ov, ensure_ascii=False, indent=1), "utf-8")
-    rebuild()
-    return {"ok": True, "hidden": not L.get("manual")}
 
 
 # ------------------------------------------------------------------ admin API (server-side access control)
@@ -765,10 +565,8 @@ def decide(d: Decision):
 
 @app.post("/api/v1/admin/reset", dependencies=[Depends(require_admin)])
 def reset():
-    """Back to the recorded demo state: no human decisions, no seller-added or seller-edited products."""
-    for f in (pipeline.DECISIONS, pipeline.SELLER_LISTINGS, pipeline.SELLER_OVERRIDES):
-        if f.exists():
-            f.unlink()
+    if pipeline.DECISIONS.exists():
+        pipeline.DECISIONS.unlink()
     rebuild()
     return {"ok": True}
 

@@ -95,7 +95,7 @@ function Matching() {
   return (
     <>
       <div className="sec-h"><div><div className="sub">فیدهای خام ← اعتبارسنجی ← یکسان‌سازی ← استخراج ویژگی ← تطبیق ← کاتالوگ · ادغام خودکار از {fa(d.thresholds.auto)}، بررسی انسانی از {fa(d.thresholds.review)}</div></div>
-        <button className="btn btn-ghost btn-sm" onClick={async () => { await api("/api/v1/admin/reset", { method: "POST" }); toast("تصمیم‌ها و محصولات دستی فروشنده‌ها پاک شد."); load(); }}>بازنشانی داده نمایشی</button></div>
+        <button className="btn btn-ghost btn-sm" onClick={async () => { await api("/api/v1/admin/reset", { method: "POST" }); toast("تصمیم‌ها بازنشانی شد."); load(); }}>بازنشانی تصمیم‌ها</button></div>
       <div className="kpis">
         <div className="kpi"><div className="v">{fa(s.raw)}</div><div className="k">آگهی خام از {fa(d.sellers.length)} فروشگاه</div></div>
         <div className="kpi"><div className="v">{fa(s.products)}</div><div className="k">محصول یکتا</div></div>

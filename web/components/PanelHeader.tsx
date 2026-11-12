@@ -7,7 +7,7 @@ import { toast, useAuth } from "@/lib/client";
 import { Ui } from "./ui";
 
 const NAV: Record<string, [string, string, string][]> = {
-  seller: [["/seller", "chart", "داشبورد"], ["/seller/products", "box", "محصولات و افزودن محصول"]],
+  seller: [["/seller", "chart", "داشبورد"]],
   admin: [["/admin", "shield", "داشبورد و تطبیق محصول"]],
 };
 
@@ -16,7 +16,13 @@ function DemoSwitch() {
   const { user, refresh } = useAuth();
   const router = useRouter();
   const [accounts, setAccounts] = useState<any[]>([]);
-  useEffect(() => { api("/api/v1/auth/demo-accounts").then(setAccounts).catch(() => {}); }, []);
+  useEffect(() => {
+    let alive = true;
+    const load = (left: number) => api<any[]>("/api/v1/auth/demo-accounts").then((a) => alive && setAccounts(a))
+      .catch(() => { if (alive && left) setTimeout(() => load(left - 1), 1200); });   // backend may still be starting
+    load(8);
+    return () => { alive = false; };
+  }, []);
   const panel = accounts.filter((a) => a.role !== "buyer");
   if (panel.length < 2 || !user) return null;
   return (
