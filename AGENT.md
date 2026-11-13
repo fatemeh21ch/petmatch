@@ -53,7 +53,7 @@ Data: `backend/data/raw/*` feeds (committed), `ground_truth.json` (matching labe
 | `app/store/[seller]/[listing]` | Fake shop page after a "buy" click (deliberately outside both layouts) |
 | `components/` | `Header` (shop), `PanelHeader` (panels, demo account switch), `AdminStores` (admin stores tab), `CompareBar` + `CompareButton` (in `ui`), `Guard` (role gate + auto demo login), `ProductView`, `Charts` (SVG), `Otp`, `ui` (`Svg`, `Ui` icons, `Stars`, `Empty`, …) |
 | `lib/api.ts` | `api()` (browser, same-origin) and `serverApi()` (server components → :8000) |
-| `lib/client.tsx` | `useAuth` (+ `pm_logged_out` flag), pets (with `breed`), favorites and the compare list (`useCompare`, max 4) in localStorage, `toast` |
+| `lib/client.tsx` | `useAuth` (+ `pm_logged_out` flag), pets (with `breed`; stored per account as `pm_pets:<phone>`, legacy `pm_pets` adopted on first login), favorites and the compare list (`useCompare`, max 4) in localStorage, `toast` |
 | `lib/art.ts` | All SVG art; `petArt(pet)` draws the profile picture from the breed (`CAT_BREED_ART` / `DOG_BREED_ART`); UI icon set is `UI` (`ui(name)`) — add new icons there |
 | `lib/format.ts` | `fa()` Persian numbers, `fd()` Persian digits in text, `q2h()` search URLs |
 | `app/globals.css`, `app/extra.css` | All styles (plain CSS, tokens in `:root`). Panel/seller-form styles at the end of `extra.css` |
@@ -76,7 +76,8 @@ Data: `backend/data/raw/*` feeds (committed), `ground_truth.json` (matching labe
 - In matching, a false merge is worse than a missed merge: uncertain → review queue, never auto-merge.
 - Prices are integers in **toman**; "total" = price + shipping. Show numbers with `fa()`.
 - All user-facing text is Persian; code, comments and identifiers are English.
-- Pet profile stays on the device; only species/age-in-months/weight/allergies/breed go to the API.
+- Pet profiles need a login (`/pet` shows a login prompt) and belong to that account, but still stay on the device;
+  only species/age-in-months/weight/allergies/breed go to the API. Show years with `fd()`, never `fa()` (no thousands comma).
 - Add a pytest for every new endpoint/rule in `backend/tests/test_core.py`; tests that write runtime files must restore them.
 
 ## Docs

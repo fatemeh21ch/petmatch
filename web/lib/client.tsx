@@ -53,11 +53,31 @@ export function ageMonths(p: Partial<Pet> | null | undefined) {
   const t = jalaliToday();
   return Math.max(0, (t.y - p.birth_year) * 12 + (t.m - (p.birth_month || 1)));
 }
+/** Pets belong to the logged-in account. They still live only on this device, under a per-account key,
+ * so a logged-out visitor (or another account on the same device) never sees them. */
+const petKey = (phone: string) => `pm_pets:${phone}`;
+const activeKey = (phone: string) => `pm_active:${phone}`;
 export function usePets() {
-  const pets = useLocal<Pet[]>("pm_pets", EMPTY);
-  const activeId = useLocal<string | null>("pm_active", null);
-  const active = activeId === "none" ? null : pets.find((p) => p.id === activeId) || pets[0] || null;
-  return { pets, active, setActive: (id: string | null) => write("pm_active", id), setPets: (l: Pet[]) => write("pm_pets", l) };
+  const { user } = useAuth();
+  const phone = user?.phone || "";
+  const stored = useLocal<Pet[]>(phone ? petKey(phone) : "pm_pets:none", EMPTY);
+  const activeId = useLocal<string | null>(phone ? activeKey(phone) : "pm_active:none", null);
+  const pets = phone ? stored : (EMPTY as Pet[]);
+  const active = !phone || activeId === "none" ? null : pets.find((p) => p.id === activeId) || pets[0] || null;
+  return {
+    pets, active, canEdit: !!phone,
+    setActive: (id: string | null) => { if (phone) write(activeKey(phone), id); },
+    setPets: (l: Pet[]) => { if (phone) write(petKey(phone), l); },
+  };
+}
+/** Pets saved before profiles needed a login move to the first account that logs in on this device. */
+function adoptLegacyPets(phone: string) {
+  const legacy = read<Pet[] | null>("pm_pets", null);
+  if (!legacy?.length || read<Pet[] | null>(petKey(phone), null)) return;
+  write(petKey(phone), legacy);
+  write(activeKey(phone), read<string | null>("pm_active", null));
+  write("pm_pets", null);
+  write("pm_active", null);
 }
 /** Only what ranking needs leaves the device (species, age in months, weight, allergies, breed): never the name or the birth date. */
 export function petQuery(p: Pet | null) {
@@ -120,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     let u: User | null = null;
     try { u = (await api<{ user: User | null }>("/api/v1/auth/me")).user; } catch { u = null; }
-    if (u) write(LOGGED_OUT, null);   // any real login re-enables demo auto-entry
+    if (u) { write(LOGGED_OUT, null); adoptLegacyPets(u.phone); }   // any real login re-enables demo auto-entry
     setUser(u);
     setReady(true);
   }, []);

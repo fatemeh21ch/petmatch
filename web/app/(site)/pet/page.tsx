@@ -1,10 +1,11 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ProductCard, Svg, Ui } from "@/components/ui";
+import { Empty, ProductCard, Svg, Ui } from "@/components/ui";
 import { api } from "@/lib/api";
-import { petArt } from "@/lib/art";
-import { ageMonths, jalaliToday, MAX_PETS, MONTHS, Pet, petQuery, toast, usePets } from "@/lib/client";
-import { fa, SP } from "@/lib/format";
+import { catArt, petArt } from "@/lib/art";
+import { ageMonths, jalaliToday, MAX_PETS, MONTHS, Pet, petQuery, toast, useAuth, usePets } from "@/lib/client";
+import { fa, fd, SP } from "@/lib/format";
 
 const ALLERGENS: [string, string][] = [["chicken", "مرغ"], ["salmon", "سالمون"], ["lamb", "بره"], ["tuna", "تن ماهی"], ["duck", "اردک"], ["beef", "گوشت گاو"]];
 type Breed = { key: string; fa: string; why?: string | null; adult_at: number; size?: string | null };
@@ -86,7 +87,7 @@ function PetForm({ editing, onDone }: { editing: Pet | null; onDone: (id?: strin
           <div className="field"><label htmlFor="bm">ماه تولد</label>
             <select id="bm" value={v.birth_month || ""} onChange={(e) => setV({ ...v, birth_month: +e.target.value || null })}><option value="">نمی‌دانم</option>{MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select></div>
           <div className="field"><label htmlFor="by">سال تولد (شمسی)</label>
-            <select id="by" value={v.birth_year || ""} onChange={(e) => setV({ ...v, birth_year: +e.target.value || null })}><option value="">نمی‌دانم</option>{years.map((y) => <option key={y} value={y}>{fa(y)}</option>)}</select></div>
+            <select id="by" value={v.birth_year || ""} onChange={(e) => setV({ ...v, birth_year: +e.target.value || null })}><option value="">نمی‌دانم</option>{years.map((y) => <option key={y} value={y}>{fd(y)}</option>)}</select></div>
         </div>
         <div className="hint" style={{ marginTop: -6 }}>{!v.birth_year ? "بدون تاریخ تولد، رده سنی در پیشنهادها لحاظ نمی‌شود." : future ? "این تاریخ هنوز نرسیده است." : `سن امروز: ${ageText(ageMonths(v))}`}</div>
         <div className="field"><label htmlFor="pw">وزن (کیلوگرم)</label>
@@ -106,7 +107,24 @@ function PetForm({ editing, onDone }: { editing: Pet | null; onDone: (id?: strin
   );
 }
 
+/** Pet profiles belong to an account: adding or seeing them needs a login (any role). */
 export default function PetPage() {
+  const { user, ready } = useAuth();
+  if (!ready) return <div className="skeleton" style={{ height: 420, marginTop: 24 }} />;
+  if (!user) return (
+    <Empty art={catArt({ glasses: true })}>
+      <h2 style={{ fontSize: 20 }}>برای ساخت پروفایل حیوان وارد شو</h2>
+      <p>پروفایل حیوان‌ها به حساب تو وصل است: سن، نژاد، وزن و حساسیت‌ها پیشنهادها را برای همان حیوان شخصی می‌کنند. اطلاعات فقط روی همین دستگاه می‌ماند.</p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+        <Link className="btn btn-primary" href="/login?next=/pet">ورود با کد یک‌بارمصرف</Link>
+        <Link className="btn btn-ghost" href="/signup?next=/pet">ثبت‌نام</Link>
+      </div>
+    </Empty>
+  );
+  return <PetProfiles key={user.phone} />;
+}
+
+function PetProfiles() {
   const { pets, active, setActive, setPets } = usePets();
   const [mode, setMode] = useState<"view" | "new" | "edit">("view");
   const [recs, setRecs] = useState<any[] | null>(null);
@@ -153,7 +171,7 @@ export default function PetPage() {
             <div className="breed">{SP[card.species]}{br ? ` · ${br.fa}` : ""}{size ? ` · ${size}` : ""}{card.sterilised ? " · عقیم‌شده" : ""}</div>
             <div className="tiles2">
               <div className="tile2"><span className="ic" style={{ background: "#e8579b" }}><Ui n="clock" s={18} /></span><small>سن (امروز)</small><b>{ageText(ageMonths(card))}</b></div>
-              <div className="tile2"><span className="ic" style={{ background: "#4f9ac2" }}><Ui n="star" s={18} /></span><small>تولد</small><b>{card.birth_year ? `${MONTHS[(card.birth_month || 1) - 1]} ${fa(card.birth_year)}` : "نامشخص"}</b></div>
+              <div className="tile2"><span className="ic" style={{ background: "#4f9ac2" }}><Ui n="star" s={18} /></span><small>تولد</small><b>{card.birth_year ? `${MONTHS[(card.birth_month || 1) - 1]} ${fd(card.birth_year)}` : "نامشخص"}</b></div>
               <div className="tile2"><span className="ic" style={{ background: "#f08a24" }}><Ui n="chart" s={18} /></span><small>وزن</small><b>{card.weight_kg ? `${fa(card.weight_kg)} کیلو` : "نامشخص"}</b></div>
               <div className="tile2"><span className="ic" style={{ background: "#2e9b62" }}><Ui n="shield" s={18} /></span><small>حساسیت</small><b>{card.allergies?.length ? card.allergies.map((a: string) => ALLERGENS.find((x) => x[0] === a)?.[1]).join("، ") : "ندارد"}</b></div>
             </div>
